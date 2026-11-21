@@ -1,0 +1,396 @@
+{
+  "00_constant": {
+    "experiment": "00_constant",
+    "model": "dummy",
+    "groups": [],
+    "parameters": {},
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "01_ridge_baseline": {
+    "experiment": "01_ridge_baseline",
+    "model": "ridge",
+    "groups": [],
+    "parameters": {
+      "alpha": 20.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "02_ridge_semantic": {
+    "experiment": "02_ridge_semantic",
+    "model": "ridge",
+    "groups": [
+      "semantic"
+    ],
+    "parameters": {
+      "alpha": 20.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "03_ridge_size": {
+    "experiment": "03_ridge_size",
+    "model": "ridge",
+    "groups": [
+      "semantic",
+      "size"
+    ],
+    "parameters": {
+      "alpha": 20.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "04_ridge_age": {
+    "experiment": "04_ridge_age",
+    "model": "ridge",
+    "groups": [
+      "semantic",
+      "size",
+      "age"
+    ],
+    "parameters": {
+      "alpha": 20.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "05_ridge_quality": {
+    "experiment": "05_ridge_quality",
+    "model": "ridge",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality"
+    ],
+    "parameters": {
+      "alpha": 20.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "06_ridge_log": {
+    "experiment": "06_ridge_log",
+    "model": "ridge",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality",
+      "log"
+    ],
+    "parameters": {
+      "alpha": 20.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "ridge_alpha_5": {
+    "experiment": "ridge_alpha_5",
+    "model": "ridge",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality",
+      "log"
+    ],
+    "parameters": {
+      "alpha": 5.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "ridge_alpha_50": {
+    "experiment": "ridge_alpha_50",
+    "model": "ridge",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality",
+      "log"
+    ],
+    "parameters": {
+      "alpha": 50.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "ridge_alpha_100": {
+    "experiment": "ridge_alpha_100",
+    "model": "ridge",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality",
+      "log"
+    ],
+    "parameters": {
+      "alpha": 100.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "elasticnet_0.0005": {
+    "experiment": "elasticnet_0.0005",
+    "model": "elasticnet",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality",
+      "log"
+    ],
+    "parameters": {
+      "alpha": 0.0005,
+      "l1_ratio": 0.9
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "elasticnet_0.001": {
+    "experiment": "elasticnet_0.001",
+    "model": "elasticnet",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality",
+      "log"
+    ],
+    "parameters": {
+      "alpha": 0.001,
+      "l1_ratio": 0.9
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "svr": {
+    "experiment": "svr",
+    "model": "svr",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality",
+      "log"
+    ],
+    "parameters": {},
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "catboost_depth_4": {
+    "experiment": "catboost_depth_4",
+    "model": "catboost",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality"
+    ],
+    "parameters": {
+      "depth": 4
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "catboost_depth_6": {
+    "experiment": "catboost_depth_6",
+    "model": "catboost",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality"
+    ],
+    "parameters": {
+      "depth": 6
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "xgboost_depth_2": {
+    "experiment": "xgboost_depth_2",
+    "model": "xgboost",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality"
+    ],
+    "parameters": {
+      "max_depth": 2
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "xgboost_depth_3": {
+    "experiment": "xgboost_depth_3",
+    "model": "xgboost",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality"
+    ],
+    "parameters": {
+      "max_depth": 3
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "elasticnet_0.0005_exclude": {
+    "experiment": "elasticnet_0.0005",
+    "model": "elasticnet",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality",
+      "log"
+    ],
+    "parameters": {
+      "alpha": 0.0005,
+      "l1_ratio": 0.9
+    },
+    "exclude_outliers": true,
+    "seed": 42
+  },
+  "catboost_depth_6_exclude": {
+    "experiment": "catboost_depth_6",
+    "model": "catboost",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality"
+    ],
+    "parameters": {
+      "depth": 6
+    },
+    "exclude_outliers": true,
+    "seed": 42
+  },
+  "ablation_without_semantic": {
+    "experiment": "ablation_without_semantic",
+    "model": "ridge",
+    "groups": [
+      "size",
+      "age",
+      "quality",
+      "log"
+    ],
+    "parameters": {
+      "alpha": 20.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "ablation_without_size": {
+    "experiment": "ablation_without_size",
+    "model": "ridge",
+    "groups": [
+      "semantic",
+      "age",
+      "quality",
+      "log"
+    ],
+    "parameters": {
+      "alpha": 20.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "ablation_without_age": {
+    "experiment": "ablation_without_age",
+    "model": "ridge",
+    "groups": [
+      "semantic",
+      "size",
+      "quality",
+      "log"
+    ],
+    "parameters": {
+      "alpha": 20.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "ablation_without_quality": {
+    "experiment": "ablation_without_quality",
+    "model": "ridge",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "log"
+    ],
+    "parameters": {
+      "alpha": 20.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "ablation_without_log": {
+    "experiment": "ablation_without_log",
+    "model": "ridge",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality"
+    ],
+    "parameters": {
+      "alpha": 20.0
+    },
+    "exclude_outliers": false,
+    "seed": 42
+  },
+  "blend_50_50": {
+    "components": [
+      "elasticnet_0.0005_exclude",
+      "catboost_depth_6"
+    ],
+    "weights": [
+      0.5,
+      0.5
+    ],
+    "space": "natural log"
+  },
+  "elasticnet_0.0005_exclude_seed2026": {
+    "experiment": "elasticnet_0.0005",
+    "model": "elasticnet",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality",
+      "log"
+    ],
+    "parameters": {
+      "alpha": 0.0005,
+      "l1_ratio": 0.9
+    },
+    "exclude_outliers": true,
+    "seed": 2026
+  },
+  "catboost_depth_6_seed2026": {
+    "experiment": "catboost_depth_6",
+    "model": "catboost",
+    "groups": [
+      "semantic",
+      "size",
+      "age",
+      "quality"
+    ],
+    "parameters": {
+      "depth": 6
+    },
+    "exclude_outliers": false,
+    "seed": 2026
+  }
+}

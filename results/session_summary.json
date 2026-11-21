@@ -1,0 +1,41 @@
+{
+  "recommended_experiment": "blend_50_50",
+  "cv_log_rmse": 0.12116504082514586,
+  "baseline_ridge_rmse": 0.15091290327146994,
+  "blend_components": [
+    "elasticnet_0.0005_exclude",
+    "catboost_depth_6"
+  ],
+  "blend_cv_rmse": 0.12116504082514586,
+  "experiments_run": 27,
+  "validation_rows": 1460,
+  "prediction_rows": 1459,
+  "recommended_submission": "submissions/recommended.csv",
+  "kaggle_score": null,
+  "kaggle_rank": null,
+  "kaggle_submitted": false,
+  "limitations": [
+    "Models and features were selected using development cross-validation; selection optimism remains.",
+    "Seed 2026 is a stability check, not an independent test set or confidence interval.",
+    "Feature ablations are conditional on this fixed Ridge model; effects can interact.",
+    "Outlier rule came from exploratory training-data analysis; all validation rows remain scored.",
+    "Historical top-percentile notebook claims do not establish a current leaderboard cutoff."
+  ],
+  "stability": [
+    {
+      "experiment": "elasticnet_0.0005_exclude",
+      "seed42_rmse": 0.12523055322900106,
+      "seed2026_rmse": 0.1259794403093099
+    },
+    {
+      "experiment": "catboost_depth_6",
+      "seed42_rmse": 0.12504910860699017,
+      "seed2026_rmse": 0.12233041746266858
+    },
+    {
+      "experiment": "blend_50_50",
+      "seed42_rmse": 0.12116504082514586,
+      "seed2026_rmse": 0.11951563005459413
+    }
+  ]
+}

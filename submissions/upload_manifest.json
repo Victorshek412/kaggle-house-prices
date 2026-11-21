@@ -1,0 +1,10 @@
+{
+  "01_ridge_baseline.csv": {
+    "sha256": "339e4f6394ad58666124c7d603aa39802bf7e200bea5911adb78fc61324bb9e4",
+    "rows": 1459
+  },
+  "recommended.csv": {
+    "sha256": "d2760414cc0d9cc189cb6d8cb515a92a8e243235daa8c07f1d0457993c493f2a",
+    "rows": 1459
+  }
+}

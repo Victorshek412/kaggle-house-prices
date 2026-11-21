@@ -1,0 +1,32 @@
+{
+  "created_utc": "2026-11-09T08:08:41.345972+00:00",
+  "python": "3.11.5",
+  "packages": {
+    "numpy": "2.4.6",
+    "pandas": "2.3.3",
+    "scikit-learn": "1.9.1",
+    "catboost": "1.2.10",
+    "xgboost": "3.2.0",
+    "scipy": "1.17.1",
+    "matplotlib": "3.11.2"
+  },
+  "data_sha256": {
+    "train.csv": "1e18addf81e5e4d347cc17ee6075bbe4a42b7fa26b9e5b063e8f692a5f929d41",
+    "test.csv": "8fdd3d829d4d986b58f845c9553b225e67dd8383624d90fb6ca1d4bed5798c1e",
+    "sample_submission.csv": "f19e99699b925aa3085c8d2ae43c62f15fbcd35e4a953b98025f8392c3ffa807",
+    "data_description.txt": "356a4670aa688afa8ba44b1365b633fbbac2dae535fe4638532630607d64070d"
+  },
+  "seed": 42,
+  "folds": 5,
+  "metric": "RMSE(log(SalePrice), predicted_log_price)",
+  "training_rows": 1460,
+  "test_rows": 1459,
+  "test_prediction_method": "Mean of five fold-model log predictions, exponentiated once",
+  "outlier_rule": "Training rows only: GrLivArea > 4000 and SalePrice < 300000",
+  "external_price_labels_used": false,
+  "kaggle_submitted": false,
+  "source_sha256": {
+    "house_prices.py": "a3827bca38ab1b0f83dbf8e87b9930e5063dcfe9d57b21144626342052c520b8",
+    "run_experiments.py": "7deb4b390de88fe3ce333066e5c86bf9e9ddf2e25dc9c4d6ae3915100e8773ed"
+  }
+}

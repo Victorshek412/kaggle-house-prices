@@ -1,0 +1,6 @@
+feature_group,full_model_rmse,without_group_rmse,benefit_of_group,interpretation
+log,0.13135698406610635,0.14864063281187695,0.017283648745770597,Positive benefit means removal worsened this fixed Ridge model.
+age,0.13135698406610635,0.1321208011868388,0.0007638171207324518,Positive benefit means removal worsened this fixed Ridge model.
+size,0.13135698406610635,0.13168169618535397,0.00032471211924761656,Positive benefit means removal worsened this fixed Ridge model.
+semantic,0.13135698406610635,0.1313932172135522,3.6233147445857705e-05,Positive benefit means removal worsened this fixed Ridge model.
+quality,0.13135698406610635,0.13089812960544273,-0.0004588544606636269,Positive benefit means removal worsened this fixed Ridge model.
