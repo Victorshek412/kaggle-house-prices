@@ -1,31 +1,32 @@
 # Kaggle House Prices
 
-Predicts house sale prices using the Ames housing data. See the [notebook](House_Prices_Project.ipynb) for the analysis, model comparison and plots.
+Predicting Ames house sale prices for the Kaggle competition
+[House Prices: Advanced Regression Techniques](https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques).
 
-| Model | Local 5-fold log-RMSE |
-| --- | ---: |
-| Ridge baseline | 0.15091 |
-| CatBoost | 0.12505 |
-| ElasticNet + CatBoost (50/50) | 0.12117 |
+## `v2/`: current work
 
-The blend reduced validation error by 19.7% versus Ridge. Applying `log1p` to skewed inputs such as floor area was the most useful feature change in the Ridge experiments. See the [full results](results/experiments.csv) and [feature comparison](results/feature_ablation.csv).
+This is a beginner-readable notebook that builds the solution one measured step at a time, from a mean baseline through feature engineering and model comparison to a blend.
 
-## Run
+- `v2/house_prices_v2.ipynb` is the notebook. It is generated from `v2/src/part*.py`.
+- `v2/notes/` has one study note per Part.
+- `v2/results/` holds CV scores, figures and submission CSVs.
 
-Download `train.csv`, `test.csv`, `sample_submission.csv` and `data_description.txt` from [Kaggle](https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data). Put them in `house-prices-advanced-regression-techniques/`, then run with Python 3.11+.
+**On Kaggle:** create a notebook in the competition, upload `v2/house_prices_v2.ipynb` (or paste in its cells), and select **Run All**.
+
+**Locally:** put `train.csv`, `test.csv`, `sample_submission.csv` and `data_description.txt` in `house-prices-advanced-regression-techniques/` at the repo root. Then run:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-sh run_python.sh run_experiments.py
-sh run_python.sh build_notebook.py --execute
+.venv/bin/pip install -r v1_reference/requirements.txt pytest
+.venv/bin/python v2/build.py --execute
+.venv/bin/pytest v2/tests
 ```
 
-On Kaggle, import the notebook, attach the competition data and select **Run All**.
+## `v1_reference/`: earlier solution, kept for reference only
 
-## Predictions
+This is an engineered pipeline: 27 experiments, with a CV log-RMSE of 0.121 for its ElasticNet + CatBoost blend. It is not maintained, and its scripts expect to be run from inside that folder.
 
-- [Ridge baseline CSV](submissions/01_ridge_baseline.csv)
-- [ElasticNet + CatBoost CSV](submissions/recommended.csv)
+## Design and plan
 
-Kaggle scores and rank have yet to be recorded.
+- Design: `docs/superpowers/specs/2026-11-22-house-prices-redo-design.md`
+- Plan: `docs/superpowers/plans/2026-11-22-house-prices-redo.md`
