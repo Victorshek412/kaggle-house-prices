@@ -1,0 +1,3 @@
+step,description,cv_rmse
+0,Predict the mean price,0.40776218644889006
+1,"Ridge, raw price, minimal preprocessing",0.15533537209265155
