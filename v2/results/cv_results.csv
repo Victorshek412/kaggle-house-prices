@@ -13,3 +13,4 @@ step,description,cv_rmse
 9,"XGBoost (1500 trees, depth 3, lr 0.03)",0.1230969059367116
 10,"CatBoost (1500 trees, depth 6, native categories)",0.12319501431309132
 11,"SVR (C=1, gamma=0.003)",0.12348613295145443
+12,"Blend: Lasso + XGBoost + CatBoost + SVR, equal weights",0.11906486800347775

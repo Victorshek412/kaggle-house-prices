@@ -1,0 +1,7 @@
+submission,step,cv_rmse,kaggle_score,submitted_on,notes
+s1_ridge_raw,1,0.15534,,,
+s2_new_features,4,0.15121,,,
+s3_log_features,5,0.13239,,,
+s4_no_outliers,6b,0.12766,,,
+s5_catboost,10,0.12320,,,
+s6_blend,12,0.11906,,,

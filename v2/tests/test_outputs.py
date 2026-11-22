@@ -94,3 +94,15 @@ def test_model_steps():
         assert scores[step] < scores["1"], step
     assert (RESULTS / "submissions" / "s5_catboost.csv").is_file()
     assert (RESULTS / "figures" / "05_model_comparison.png").is_file()
+
+
+def test_blend():
+    scores = read_results().set_index("step").cv_rmse
+    singles = scores[[s for s in ("7", "7b", "8", "9", "10", "11") if s in scores.index]]
+    assert "12" in scores.index
+    assert scores["12"] <= singles.min() + 0.002
+    assert (RESULTS / "submissions" / "s6_blend.csv").is_file()
+    for name in ("06_oof_correlation.png", "07_improvement_staircase.png"):
+        assert (RESULTS / "figures" / name).is_file(), name
+    header = (RESULTS / "kaggle_log.csv").read_text().splitlines()[0]
+    assert header == "submission,step,cv_rmse,kaggle_score,submitted_on,notes"
