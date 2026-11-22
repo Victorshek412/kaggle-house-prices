@@ -1,302 +1,326 @@
-// Builds report/House_Prices_Report_draft.docx (Times New Roman 12).
-// Run from the repo root:  node report/build_report.js
+// Builds report/House_Prices_Report_draft.docx: two-column layout modelled on the course sample,
+// Times New Roman 12. Run from the repo root after `python report/make_figures.py`:
+//     node report/build_report.js
 const fs = require("fs");
 const path = require("path");
 const {
-  Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell,
-  AlignmentType, HeadingLevel, WidthType, BorderStyle, ShadingType, Footer,
-  PageNumber, PageBreak, LevelFormat,
+  Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, Header, Footer,
+  AlignmentType, HeadingLevel, WidthType, BorderStyle, PageNumber, SectionType,
 } = require("docx");
 
-const FIG = path.join(__dirname, "..", "v2", "results", "figures");
 const FONT = "Times New Roman";
-const CONTENT_WIDTH_DXA = 9026; // A4 width minus two 1-inch margins
+const BLUE = "1F3FBF";
+const FIGS = path.join(__dirname, "figures");
+const V2FIGS = path.join(__dirname, "..", "v2", "results", "figures");
+const COL_DXA = 4693;       // one column: (A4 width - 2 x 0.75 in margins - 0.25 in gap) / 2
+const COL_PX = 300;         // image width inside one column
 
 // ---------- helpers ----------
+const run = (text, o = {}) => new TextRun({ text, font: FONT, size: 24, ...o });
+
+// body("text") or body(["plain ", {b: "bold"}, {i: "italic"}])
+function body(parts, o = {}) {
+  const list = Array.isArray(parts) ? parts : [parts];
+  return new Paragraph({
+    alignment: AlignmentType.JUSTIFIED,
+    spacing: { after: 100, line: 252 },
+    ...o,
+    children: list.map((p) => typeof p === "string" ? run(p)
+      : p.b ? run(p.b, { bold: true }) : run(p.i, { italics: true })),
+  });
+}
+
+function item(label, text) { // sample-style numbered item: "1. (Label) text"
+  return body([`${label[0]} `, { b: `(${label[1]})` }, ` ${text}`]);
+}
+
+const h1 = (t) => new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(t)] });
+const h2 = (t) => new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun(t)] });
+const h3 = (t) => new Paragraph({ heading: HeadingLevel.HEADING_3, children: [new TextRun(t)] });
+
+function caption(kind, n, text) {
+  return new Paragraph({
+    alignment: AlignmentType.CENTER, spacing: { before: 60, after: 180 },
+    children: [run(`${kind} ${n}. `, { bold: true, size: 20 }), run(text, { italics: true, size: 20 })],
+  });
+}
+
 function pngSize(file) {
   const b = fs.readFileSync(file);
   return { width: b.readUInt32BE(16), height: b.readUInt32BE(20) };
 }
 
-function body(text, opts = {}) {
-  return new Paragraph({
-    spacing: { after: 120, line: 276 },
-    alignment: AlignmentType.JUSTIFIED,
-    ...opts,
-    children: [new TextRun({ text, font: FONT, size: 24 })],
-  });
-}
-
-function placeholder(text) {
-  return new Paragraph({
-    spacing: { before: 120, after: 120 },
-    alignment: AlignmentType.CENTER,
-    border: {
-      top: { style: BorderStyle.SINGLE, size: 6, color: "999999", space: 4 },
-      bottom: { style: BorderStyle.SINGLE, size: 6, color: "999999", space: 4 },
-      left: { style: BorderStyle.SINGLE, size: 6, color: "999999", space: 4 },
-      right: { style: BorderStyle.SINGLE, size: 6, color: "999999", space: 4 },
-    },
-    children: [new TextRun({ text, font: FONT, size: 24, italics: true, color: "666666" })],
-  });
-}
-
-function h1(text) {
-  return new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text })] });
-}
-
-function h2(text) {
-  return new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text })] });
-}
-
-function caption(text) {
-  return new Paragraph({
-    spacing: { before: 60, after: 200 },
-    alignment: AlignmentType.CENTER,
-    children: [new TextRun({ text, font: FONT, size: 22, italics: true })],
-  });
-}
-
-function figure(file, widthPx, captionText) {
-  const full = path.join(FIG, file);
-  const { width, height } = pngSize(full);
-  const h = Math.round((widthPx * height) / width);
+function figure(file, n, text, widthPx = COL_PX) {
+  const { width, height } = pngSize(file);
   return [
     new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 120, after: 0 },
-      keepNext: true,
-      children: [new ImageRun({ type: "png", data: fs.readFileSync(full), transformation: { width: widthPx, height: h } })],
+      alignment: AlignmentType.CENTER, spacing: { before: 100, after: 0 }, keepNext: true,
+      children: [new ImageRun({ type: "png", data: fs.readFileSync(file),
+        transformation: { width: widthPx, height: Math.round((widthPx * height) / width) } })],
     }),
-    caption(captionText),
+    caption("Figure", n, text),
   ];
 }
 
-function table(headers, rows, widths, captionText) {
-  const border = { style: BorderStyle.SINGLE, size: 4, color: "808080" };
-  const borders = { top: border, bottom: border, left: border, right: border };
-  const cell = (text, w, header) => new TableCell({
-    borders,
-    width: { size: w, type: WidthType.DXA },
-    shading: header ? { fill: "E7E6E6", type: ShadingType.CLEAR, color: "auto" } : undefined,
-    margins: { top: 40, bottom: 40, left: 80, right: 80 },
-    children: [new Paragraph({
-      keepNext: true, // keep the whole table on one page
-      children: [new TextRun({ text, font: FONT, size: 22, bold: header })],
-    })],
+function placeholderFigure(n, text, note) {
+  return [
+    new Paragraph({
+      alignment: AlignmentType.CENTER, spacing: { before: 100, after: 0 }, keepNext: true,
+      border: ["top", "bottom", "left", "right"].reduce((o, k) =>
+        ({ ...o, [k]: { style: BorderStyle.DASHED, size: 6, color: "999999", space: 6 } }), {}),
+      children: [run(note, { italics: true, color: "777777", size: 20 })],
+    }),
+    caption("Figure", n, text),
+  ];
+}
+
+// booktabs-style table: rules above and below the header and at the bottom, no vertical lines
+function table(n, captionText, headers, rows, widths) {
+  const none = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+  const thick = { style: BorderStyle.SINGLE, size: 12, color: "000000" };
+  const thin = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
+  const make = (cells, i, last) => new TableRow({
+    children: cells.map((text, j) => new TableCell({
+      width: { size: widths[j], type: WidthType.DXA },
+      margins: { top: 30, bottom: 30, left: 60, right: 60 },
+      borders: { left: none, right: none,
+        top: i === 0 ? thick : i === 1 ? thin : none,
+        bottom: last ? thick : none },
+      children: [new Paragraph({
+        keepNext: true,
+        alignment: /^[-+$0-9. s]+$/.test(all[1][j]) ? AlignmentType.CENTER : AlignmentType.LEFT,
+        children: [run(text, { size: 20, bold: i === 0 })],
+      })],
+    })),
   });
-  const total = widths.reduce((a, b) => a + b, 0);
+  const all = [headers, ...rows];
   return [
     new Table({
-      width: { size: total, type: WidthType.DXA },
+      width: { size: widths.reduce((a, b) => a + b, 0), type: WidthType.DXA },
       columnWidths: widths,
-      rows: [
-        new TableRow({ tableHeader: true, children: headers.map((t, i) => cell(t, widths[i], true)) }),
-        ...rows.map((r) => new TableRow({ children: r.map((t, i) => cell(t, widths[i], false)) })),
-      ],
+      borders: { insideHorizontal: none, insideVertical: none, top: none, bottom: none, left: none, right: none },
+      rows: all.map((r, i) => make(r, i, i === all.length - 1)),
     }),
-    caption(captionText),
+    caption("Table", n, captionText),
   ];
 }
 
-function reference(text) {
-  return new Paragraph({
-    spacing: { after: 100, line: 276 },
-    indent: { left: 360, hanging: 360 },
-    children: [new TextRun({ text, font: FONT, size: 24 })],
-  });
-}
+const rule = () => new Paragraph({
+  spacing: { after: 120 },
+  border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: "000000", space: 1 } },
+  children: [],
+});
 
-// ---------- content ----------
-const children = [
-  new Paragraph({
-    alignment: AlignmentType.CENTER, spacing: { after: 120 },
-    children: [new TextRun({ text: "House Prices: Advanced Regression Techniques", font: FONT, size: 32, bold: true })],
-  }),
-  new Paragraph({
-    alignment: AlignmentType.CENTER, spacing: { after: 240 },
-    children: [new TextRun({ text: "Kaggle competition report", font: FONT, size: 26 })],
-  }),
-  ...[
-    "Team: [team name]",
-    "Members: [name, student ID]   [name, student ID]",
-    "Course: [course code and name]",
-    "Final Kaggle score: 0.11624 (submission s7_outlier_flag.csv)",
-  ].map((t) => new Paragraph({
-    alignment: AlignmentType.CENTER, spacing: { after: 60 },
-    children: [new TextRun({ text: t, font: FONT, size: 24 })],
-  })),
-  new Paragraph({ spacing: { after: 120 }, children: [] }),
-
-  h1("Summary"),
-  body("Our final Kaggle score is 0.11624, the root mean squared error (RMSE) between the log of our predicted prices and the log of the true prices. We got there in 13 steps. Each step changed one thing and was scored with the same five-fold cross-validation (CV), so we knew what a decision was worth before we kept it."),
-  h2("Which feature engineering effort was most useful?"),
-  body("Taking log1p of the skewed area columns (Step 5). This one change lowered our CV error from 0.1512 to 0.1324, about 12%, more than any other feature step. House prices grow roughly in proportion to size: a house twice as big costs roughly twice as much, rather than a fixed amount more. On a log scale that relationship is close to a straight line, which is the shape a linear model can fit. The log also shrinks the few very large values that would otherwise pull the regression line towards them. Section 5 explains this step in detail."),
-  h2("Which submission gave the best improvement?"),
-  body("Our biggest jump on the leaderboard was from S1 to S2, from 0.14188 to 0.13044 (a drop of 0.0114, or 8.1%). S2 contained three changes at once: predicting log(SalePrice) instead of the raw price, giving missing values their real meaning, and adding combined features. Our CV results for these three steps show that most of the gain came from predicting the log price. The improvement we learned the most from came at the end. Our blend (S6) scored worse than our own first attempt, and working out why led us to a blind spot in our CV. Fixing it took the score from 0.12037 (S6) to 0.11624 (S7). Section 8 describes how."),
-  placeholder("[Insert screenshot of the Kaggle leaderboard showing our team name and final score 0.11624]"),
-
-  h1("1  Introduction"),
-  body("The competition asks for the sale prices of 1,459 houses in Ames, Iowa. Each house is described by 79 columns: 36 numeric ones such as living area and year built, and 43 text ones such as neighbourhood and garage type. We learn from 1,460 houses whose prices are given. The data was compiled by De Cock (2011). Kaggle scores submissions on the log scale, so an error of 10% costs about the same whether a house sells for $100,000 or $1,000,000."),
-  body("This report follows the order in which we worked. Section 2 explains why we set aside a working first solution and rebuilt it. Sections 3 to 7 cover data exploration, our validation method, feature engineering, model comparison and blending. Section 8 covers what happened after we submitted, when the leaderboard did not agree with our CV. Every number in this report can be reproduced with our notebook (Appendix A)."),
-
-  h1("2  Our first attempt and why we rebuilt it"),
-  body("Our first submission, on 9 November, came from a pipeline we built with an AI coding assistant (Codex). It ran 27 experiments, blended ElasticNet with CatBoost, and scored 0.1212 on CV and 0.11745 on Kaggle, which was a decent result."),
-  body("When we tried to explain it, though, we could not. The code wrapped everything in custom scikit-learn classes and many validation checks. We could see the final score, but we could not say why each feature was there or how much each choice had helped. Most of the marks for this assignment are for the pathway to the solution, so we decided to rebuild it in a way we could defend line by line."),
-  body("The rebuilt version is one notebook in six parts. We gave ourselves two rules. Each step changes exactly one thing, and each step is scored with exactly the same five folds (scikit-learn's KFold with shuffling and random_state=42). With the folds fixed, a change in the score can only come from our own change. We used an AI assistant (Claude) during the rebuild as well, mostly as a tutor: it drafted each part and explained it, and we wrote our own study notes and only moved on once we could explain that part ourselves. Our separate statement on AI use gives more detail."),
-
-  h1("3  Exploring the data"),
-  body("SalePrice is strongly right-skewed, with a skewness of 1.88. The middle half of the houses sold for between $130,000 and $214,000, but a long tail reaches $755,000. After taking the log the skewness is 0.12, which is almost symmetric (Figure 1). This told us to predict log(SalePrice), which is also the scale Kaggle scores on."),
-  ...figure("01_saleprice_distribution.png", 560, "Figure 1. SalePrice before and after taking the log."),
-  body("Missing values come in two kinds, and the data description tells them apart. For many columns, NA means the house does not have the thing at all. PoolQC is missing for 1,453 of the 1,460 houses simply because almost no house has a pool. For other columns, such as LotFrontage (259 missing), NA means the value was not recorded. We treat the two kinds differently in Step 3. We also found 15 columns that have gaps only in the test set, for example MSZoning and GarageCars, so our preprocessing had to cope with gaps it never saw during training (Figure 2)."),
-  ...figure("02_missing_values.png", 400, "Figure 2. The 20 columns with the most missing values in the training data. Orange means that NA stands for \"the house has none\"."),
-  body("One small detail caught us out. By default, pandas reads the text \"None\" as a missing value, but in this data \"None\" is a real category: MasVnrType = None means the house has no masonry veneer. With the default settings, 872 houses looked as if their veneer type was unknown. We read the files with keep_default_na=False and na_values=[\"NA\", \"\"], which leaves only 8 that are truly unknown."),
-  body("Living area is one of the strongest predictors, but two houses (Ids 524 and 1299) are over 4,000 sq ft and sold for less than $300,000 (Figure 3). Both were Partial sales, which the data description defines as homes that were not completed when last assessed, so their prices do not follow the usual pattern. Two other houses of that size sold for $745,000 and $755,000, which fits the pattern, so our outlier rule only covers large houses that sold below $300,000."),
-  ...figure("03_outliers.png", 380, "Figure 3. Living area against sale price. The two circled houses are the outliers."),
-  body("Among the numeric columns, OverallQual (0.79) and GrLivArea (0.71) have the highest correlation with SalePrice. Correlation only measures straight-line relationships and ignores the 43 text columns, so we used it as a quick map and did not drop any features because of it. Each finding in this section led to one of the feature steps in Section 5."),
-
-  h1("4  How we validated our models"),
-  body("Kaggle hides the test prices and limits how often we can submit, so we needed our own estimate of how well a model works on unseen houses. We used five-fold CV. The 1,460 houses are split into five groups of 292, and each group takes a turn as the validation set while a model is trained on the other four. Every house is predicted exactly once by a model that never saw it. The RMSE of these out-of-fold (OOF) predictions is our CV score. For the test set we average the predictions of the five fold models."),
-  body("The main trap is data leakage. Filling gaps with the median, scaling, and listing the categories for one-hot encoding all learn something from the data. If we did them on all 1,460 houses first, the validation houses would influence training. For example, the median LotFrontage is 69 over all houses but 70 over the training part of the first fold. To avoid this, we put these steps and the model into a single scikit-learn Pipeline, which is refitted inside every fold. Changes that look at one house at a time, such as adding two areas together, cannot leak, so we apply those before CV."),
-  body("Two baselines set the starting point. Predicting the average price for every house (Step 0) gives a CV RMSE of 0.408. A Ridge regression on the raw price with only the basic preprocessing (Step 1) gives 0.155, and this became our first submission (Kaggle 0.14188)."),
-
-  h1("5  Feature engineering, one change at a time"),
-  body("Table 1 lists the feature steps. Every row uses the same Ridge model (alpha = 10) and the same five folds, and changes one thing compared with the row above."),
-  ...table(
-    ["Step", "Change", "CV RMSE", "vs previous"],
-    [
-      ["1", "Ridge on the raw price (baseline)", "0.15534", ""],
-      ["2", "Predict log(SalePrice)", "0.15206", "-0.00327"],
-      ["3", "Label missing values by meaning; MSSubClass as a category", "0.15106", "-0.00100"],
-      ["4", "New features: TotalSF, TotalBathrooms, HouseAge, RemodelAge, TotalPorchSF", "0.15121", "+0.00014"],
-      ["5", "log1p of 20 skewed area columns", "0.13239", "-0.01882"],
-      ["6", "Drop the 2 outliers from the training folds", "0.12766", "-0.00473"],
-      ["6b", "Tune Ridge alpha (1 to 100)", "0.12766", "0"],
-    ],
-    [700, 5426, 1400, 1500],
-    "Table 1. Feature engineering steps (Ridge, five-fold CV RMSE on log price)."
-  ),
-  body("Step 2 gave less than we expected. Predicting the log price lines up what the model learns with what Kaggle scores, but the features were still on their raw scale, and log price is not a straight line in raw area. The full benefit only appeared in Step 5, once the areas were logged too, so Steps 2 and 5 work as a pair."),
-  body("In Step 3 we only replaced NA with a label such as NoGarage when another column confirmed it. A missing GarageType became NoGarage only if GarageArea was 0. If a house had a garage but its type was missing, we left it missing, so the Pipeline treated it as unknown. We also turned MSSubClass into text, because its values (20, 60, 190 and so on) are codes for house types rather than quantities. The gain was small (-0.0010). Looking back, this makes sense: the Pipeline was already filling text gaps with a \"Missing\" category, which a model can learn from almost as well. This step mostly made the data more accurate."),
-  body("Step 4 added combined features such as TotalSF (living area plus basement area) and HouseAge (year sold minus year built). The CV score did not move (+0.00014). A linear model can already add two columns together by giving them the same weight, so TotalSF told Ridge nothing new. The features were still worth keeping. log(TotalSF) is not the sum of the separate logs, so they started to matter after Step 5, and tree models, which split on one column at a time, cannot build sums by themselves."),
-  body("Step 5 was the biggest step. We took log1p, the log of 1 + x, so that zero areas stay at zero, of every area column whose skewness in the training data was above 0.75. That is 20 of our 21 area columns; only GarageArea (skewness 0.18) was left alone. The CV error fell by 0.0188, about 12%, and Figure 4 shows how much larger this drop is than the others. We chose the 20 columns by looking at the skewness of the whole training set, outside the CV loop. This uses the features only and never the price, so we believe its effect on the CV score is negligible."),
-  ...figure("07_improvement_staircase.png", 560, "Figure 4. CV RMSE after each step of the pathway. The y-axis starts at 0.11, so the differences look larger than they are."),
-  body("Step 6 removed the two outliers from the training data in each fold. They were still predicted and still counted in the score, because the test set could contain houses like them. CV improved by 0.0047. This step also gave us our most memorable bug. Our first version of the rule checked GrLivArea > 4000 inside the CV function, and Step 6 scored exactly the same as Step 5. Step 5 had already replaced GrLivArea with its log, whose maximum is about 8.6, so no house matched the rule. We fixed it by computing the outlier mask once from the raw data, and added a test that fails if the two steps ever score the same again."),
-  body("Finally, we tuned Ridge's alpha over 1, 3, 10, 30 and 100. The scores formed a U shape, from 0.1303 at alpha = 1 down to 0.1277 at alpha = 10 and back up to 0.1298 at alpha = 100. Too little penalty overfits and too much underfits. Our first guess of 10 turned out to be the best value."),
-
-  h1("6  Comparing models"),
-  body("With the features fixed, we compared seven models on the same folds. All of them predict the log price and are trained without the two outliers (Table 2 and Figure 5)."),
-  ...table(
-    ["Model", "Family", "CV RMSE", "Time (s)"],
-    [
-      ["XGBoost", "Boosted trees", "0.12310", "4"],
-      ["CatBoost", "Boosted trees", "0.12320", "86"],
-      ["SVR (RBF kernel)", "Kernel", "0.12349", "5"],
-      ["Lasso", "Linear", "0.12546", "2"],
-      ["ElasticNet", "Linear", "0.12565", "3"],
-      ["Ridge", "Linear", "0.12766", "0.4"],
-      ["Random Forest", "Bagged trees", "0.13822", "12"],
-    ],
-    [2900, 2726, 1700, 1700],
-    "Table 2. Single models (five-fold CV RMSE, and time for the full CV on our machine)."
-  ),
-  body("Lasso beat Ridge. Its penalty uses the absolute size of the coefficients, which pushes weak ones to exactly zero, and it kept only 107 of the 324 columns. Dropping columns that add little on top of the others seems to have reduced overfitting."),
-  body("Random Forest was the weakest model, behind even Ridge. A forest averages many deep trees, each trained on a bootstrap sample. Averaging cancels random errors (variance) but not errors that every tree shares (bias). After Step 5, log price is close to a straight line in the main features, and a tree can only approximate a line with steps, so every tree makes the same kind of error. Boosting works differently. It adds small trees one after another, each fitted to the errors that are still left, so it can reduce that shared error. XGBoost (Chen and Guestrin, 2016) and CatBoost (Prokhorenkova et al., 2018), both boosting methods, came first and second. CatBoost handles text columns itself, replacing each category with an average price computed in an order that avoids leakage. It did as well as XGBoost without the log features or one-hot encoding, but it was about 20 times slower."),
-  body("SVR needed the most tuning. Its two settings, C and gamma, partly cancel each other out, and the best pair kept landing on the edge of our grid. We widened the grid twice, then checked four pairs just outside the final corner (C = 1, gamma = 0.003), and all four scored worse. After this tuning SVR came third, at 0.1235."),
-  ...figure("05_model_comparison.png", 430, "Figure 5. CV RMSE of the seven single models."),
-
-  h1("7  Blending"),
-  body("Averaging models only helps when they make different mistakes. To measure this, we correlated the models' out-of-fold residuals, that is, true minus predicted log price (Figure 6). Ridge, Lasso and ElasticNet correlate at 0.99 or more, so they make almost the same errors. The linear models and the boosted trees correlate at about 0.88, and XGBoost and CatBoost at 0.93, since they encode categories differently."),
-  ...figure("06_oof_correlation.png", 360, "Figure 6. Correlation between the models' out-of-fold residuals. Darker cells mean more similar errors."),
-  body("Before looking at any blend scores, we fixed a rule: take the best model from each family and keep both boosting models. That gave Lasso, XGBoost, CatBoost and SVR, averaged with equal weights. We did not tune the weights, because weights chosen on the same 1,460 OOF predictions would fit their noise and make the CV score look better than it really is. The blend scored 0.1191, better than the best single model (0.1231). Adding every model except Random Forest made it worse (0.1202), because three near-identical linear models then had three of the six votes."),
-
-  h1("8  What the leaderboard taught us"),
-  body("Table 3 puts our CV scores next to the Kaggle scores. Up to S4 the two agree and both go steadily down. After that they disagree. CatBoost (S5) beat Ridge (S4) on CV but was slightly worse on Kaggle, and the blend (S6), our best CV score, did worse on Kaggle than our first attempt (0.12037 against 0.11745)."),
-  ...table(
-    ["Submission", "What changed", "CV RMSE", "Kaggle"],
-    [
-      ["S1", "Ridge on the raw price", "0.15534", "0.14188"],
-      ["S2", "Log target, missing values, new features", "0.15121", "0.13044"],
-      ["S3", "Log of skewed areas", "0.13239", "0.12253"],
-      ["S4", "Outliers dropped, alpha tuned", "0.12766", "0.12236"],
-      ["S5", "CatBoost", "0.12320", "0.12310"],
-      ["S6", "Four-model blend", "0.11906", "0.12037"],
-      ["S7", "Outliers kept with a HugePartial flag", "0.11910", "0.11624"],
-      ["First attempt", "ElasticNet + CatBoost (Codex pipeline)", "0.12117", "0.11745"],
-    ],
-    [1700, 4326, 1500, 1500],
-    "Table 3. CV and Kaggle scores for every submission."
-  ),
-  body("Part of this is noise. When we scored the five folds separately, the same Ridge model ranged from 0.105 to 0.172, depending on which 292 houses were in the fold. A leaderboard score is one more sample of this kind, so a difference of 0.001 between two submissions means very little. We still wanted to know whether something real was going on, so we looked at where our CV error came from."),
-  body("Two houses dominate it: the outliers 524 and 1299. The blend's log errors on them were -1.25 and -1.40, so it priced them at about 3.5 and 4 times their real value. Squared, these two errors make up about 17% of the total squared error, and without them our CV RMSE would be 0.1085 instead of 0.1191. Both houses also happen to fall into the same fold. Whenever one of them was being predicted, the other was missing from the training data too, so our CV could never test whether a model can learn from one of these houses and use it on the other."),
-  body("The test set contains a third house of the same kind. Id 2550 has 5,095 sq ft of living area and the top quality rating of 10, and it was also a Partial sale. Steps 6 to 12 removed its two look-alikes from training, so our models had only learned that big houses are expensive, and they predicted between $565,000 and $763,000 for it (S4 to S6). Our first attempt predicted $491,000. Its CatBoost model had been trained with the outliers included and predicted $306,000 for this house, while the same model trained without them predicted $618,000. This house was the largest single difference between S6 and the first attempt."),
-  body("Our fix, Step 13, keeps the two houses in training and adds a feature, HugePartial, equal to 1 for houses over 4,000 sq ft sold as Partial sales. A model can then learn a separate adjustment for this kind of sale without changing anything for normal houses. As in Step 6, the flag is computed from the raw area. We also cleaned an impossible value we found in the test set, a garage built in 2207 (Id 2593), by treating garage years later than the sale year plus one as missing."),
-  body("Normal CV could not test this change, so we designed a small check of our own. We held out one of the two houses, trained on all the others, and predicted it, then did the same for the other house (Table 4). With our earlier method the blend was too high by a factor of 3.6 to 4.4. With Step 13 the error fell to a factor of 1.3 to 1.9."),
-  ...table(
-    ["Held-out house", "True price", "Earlier method (Steps 6 to 12)", "Step 13"],
-    [
-      ["Id 524", "$184,750", "$665,634 (log error -1.28)", "$242,533 (log error -0.27)"],
-      ["Id 1299", "$160,000", "$708,551 (log error -1.49)", "$303,257 (log error -0.64)"],
-    ],
-    [1700, 1500, 2913, 2913],
-    "Table 4. Leave-one-outlier-out check: the blend's prediction for each outlier, with (Step 13) or without (earlier method) the other outlier and the flag in the training data."
-  ),
-  body("We then refitted the same four models with the same settings and equal weights. As expected, the CV score hardly changed (0.11906 to 0.11910), because CV cannot see this effect. The prediction for Id 2550 fell from $643,000 to $260,000, while the other test houses changed by a median of only 0.25%. We submitted this once, as S7, and it scored 0.11624: our best score, and better than the first attempt. Since S6 and S7 differ almost only in that one house, the result suggests it sold for much less than our earlier predictions, like its two look-alikes."),
-  body("We also tried several other ideas on the Step 13 features, all scored with the same CV, and kept none of them. Stacking with learned weights scored 0.1226 (checked with its own CV). The first attempt's recipe of Lasso plus CatBoost at 50/50 scored 0.1203. The first attempt's quality-score features made Lasso slightly worse (0.1256 to 0.1261), and averaging XGBoost over three random seeds did not change the blend (0.11910 to 0.11911)."),
-  body("Step 13 was prompted by the leaderboard, so it is less clean than Steps 1 to 12, which were chosen on CV alone. To limit this, we fixed the change before submitting, checked it with the leave-one-out test, and submitted it only once instead of trying variants against the leaderboard."),
-
-  h1("9  Conclusion and limitations"),
-  body("From the Ridge baseline to the final blend, our CV error fell from 0.155 to 0.119 and our Kaggle score from 0.142 to 0.116. The largest single gain came from log-transforming the skewed areas. Boosted trees were the best single models, and averaging models that make different mistakes gave a further improvement at almost no cost."),
-  body("Measuring one change at a time was the most useful habit we picked up. It showed us which ideas mattered, and some results surprised us, such as new features that did nothing for a linear model and a Random Forest that lost to Ridge. Our CV also had a blind spot that only the leaderboard exposed, and looking at individual errors helped us more than trying more models."),
-  body("Our work has clear limits. All our choices (features, settings and blend members) were made with the same CV, so our CV scores are a little optimistic. Step 13 rests on only two training examples. Many of the leaderboard differences between our submissions are smaller than the noise between folds. If we did this again, we would submit after every single step, since S2 bundled three changes and we could not split its leaderboard gain between them. We would also make sure that rare kinds of houses are spread across different folds."),
-
-  new Paragraph({ children: [new PageBreak()] }),
-  h1("Appendix A  Notebook and code"),
-  body("Kaggle notebook: [link]. The notebook rebuilds every step in this report and runs in a few minutes on Kaggle; most of the time is spent on CatBoost. It is also in our repository, together with our study notes: [link]."),
-
-  h1("Appendix B  Individual answers"),
-  body("[Each member writes their own answers: main role in the competition; main difficulties for the team and for themselves; what they learned.]"),
-
-  h1("References"),
-  reference("Chen, T. and Guestrin, C. (2016). XGBoost: A scalable tree boosting system. In Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, pp. 785-794."),
-  reference("De Cock, D. (2011). Ames, Iowa: Alternative to the Boston housing data as an end of semester regression project. Journal of Statistics Education, 19(3)."),
-  reference("Kaggle. House Prices: Advanced Regression Techniques. https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques"),
-  reference("Pedregosa, F. et al. (2011). Scikit-learn: Machine learning in Python. Journal of Machine Learning Research, 12, pp. 2825-2830."),
-  reference("Prokhorenkova, L., Gusev, G., Vorobev, A., Dorogush, A. V. and Gulin, A. (2018). CatBoost: Unbiased boosting with categorical features. In Advances in Neural Information Processing Systems 31."),
+// ---------- title block (one column) ----------
+const titleBlock = [
+  rule(),
+  new Paragraph({ spacing: { before: 120, after: 120 }, children: [run("House Price Prediction", { bold: true, size: 40 })] }),
+  new Paragraph({ spacing: { after: 60 }, children: [run("[Team name]: [Name] ([Student ID]), [Name] ([Student ID])", { bold: true })] }),
+  new Paragraph({ spacing: { after: 120 }, children: [run("Kaggle competition: House Prices, Advanced Regression Techniques.  Final score: 0.11624", { size: 18 })] }),
+  rule(),
 ];
+
+// ---------- body (two columns) ----------
+const F = (name) => path.join(FIGS, name);
+const B = [
+  h1("1. Abstract"),
+  body("We took part in the Kaggle competition House Prices: Advanced Regression Techniques. The task is to predict the sale price of 1,459 houses in Ames, Iowa, from 79 features. Kaggle scores a submission by the RMSE between the log of the predicted price and the log of the true price, and our final submission scores 0.11624. We built the solution in 13 steps. We changed one thing at a time and scored every step with the same five-fold cross-validation (CV), so we always knew what each decision was worth."),
+  body([{ b: "Keywords" }, " - regression, feature engineering, cross-validation, gradient boosting, ensemble, error analysis"]),
+  body("In this report, we introduce:"),
+  body("(1) what the data looks like and what it told us to do;", { spacing: { after: 0 } }),
+  body("(2) how we validated, engineered features, compared models and blended them;", { spacing: { after: 0 } }),
+  body("(3) how our models did on the Kaggle leaderboard, and how an error analysis fixed a problem our CV could not see;", { spacing: { after: 0 } }),
+  body("(4) our answers to the two questions in the brief: the most useful feature engineering and the best improvement."),
+
+  h1("2. Dataset"),
+  body("Kaggle gives us 1,460 training houses with prices and 1,459 test houses without. Each house has 79 features: 36 numeric ones, such as living area and year built, and 43 text ones, such as neighbourhood and garage type."),
+  h2("2.1. Target"),
+  body("SalePrice is right-skewed, with a skewness of 1.88. The middle half of the houses sold for $130,000 to $214,000, while the most expensive one sold for $755,000. After a log transform the skewness drops to 0.12 (Figure 1). So we predict log(SalePrice), which is also the scale Kaggle uses for scoring."),
+  ...figure(F("f01_target.png"), 1, "SalePrice before and after the log transform"),
+  h2("2.2. Missing values"),
+  body("The data description tells us that NA means two different things. For many features, NA means the house does not have the item: PoolQC is missing for 1,453 houses because they have no pool. For others, such as LotFrontage (259 missing), the value was simply not recorded (Figure 2). We also found 15 features with gaps only in the test set, such as MSZoning and GarageCars, so our preprocessing has to cope with gaps it never sees in training."),
+  ...figure(F("f02_missing.png"), 2, "The 12 training features with the most NA values"),
+  body("One detail caught us out. By default, pandas reads the text \"None\" as missing, but MasVnrType = None is a real category that means no masonry veneer. With the default settings 872 houses looked unknown. We read the files with keep_default_na=False, and only 8 remain unknown."),
+  h2("2.3. Outliers and correlation"),
+  body("Two houses, Ids 524 and 1299, have over 4,000 sq ft of living area but sold for less than $300,000 (Figure 3). Both were Partial sales, which means the homes were not finished when they were last assessed. The two other houses of that size sold for $745,000 and $755,000, so we only treat the two cheap ones as outliers."),
+  ...figure(F("f03_outliers.png"), 3, "Living area against price; the circled houses are the outliers"),
+  body("Among the numeric features, OverallQual (0.79) and GrLivArea (0.71) correlate most with price (Figure 4). Correlation cannot see the 43 text features, so we used it as a map and did not remove any feature because of it."),
+  ...figure(F("f04_correlation.png"), 4, "Numeric features with the highest correlation to SalePrice"),
+
+  h1("3. Method"),
+  h2("3.1. Overall"),
+  body("Figure 5 shows our pathway. First, we set up a fair way to score models. Then we improved the features one step at a time with a fixed Ridge model, compared seven models on the final features and blended the best ones. After submitting, we compared our CV with the leaderboard and made one last change (Step 13)."),
+  ...figure(F("f05_pathway.png"), 5, "Our pathway from data to the final submission", 270),
+  h2("3.2. First attempt"),
+  body("Our first submission, on 9 November, came from a pipeline that we generated with an AI coding assistant (Codex). It ran 27 experiments, blended ElasticNet with CatBoost, and scored 0.1212 on CV and 0.11745 on Kaggle. However, we could not explain why each feature or setting was there. So we rebuilt everything in one notebook that we can explain line by line. For the rebuild we used another assistant (Claude) as a tutor, and we wrote study notes for every part before moving on. Our AI-use statement gives the details."),
+  h2("3.3. Validation set up"),
+  body("We use five-fold CV with fixed folds (KFold with shuffle and random_state=42). A model trained on 1,168 houses predicts the other 292, and each house takes its turn (Figure 6). Every house therefore gets one out-of-fold (OOF) prediction, and the RMSE of these predictions is our CV score. Our test prediction is the average of the five fold models."),
+  ...figure(F("f06_folds.png"), 6, "Which fold validates each of the first 20 houses"),
+  body("To avoid data leakage, we fit the median imputation, scaling and one-hot encoding inside a scikit-learn Pipeline in every fold. For example, the median LotFrontage is 69 over all houses but 70 over the training part of fold 1. Predicting the mean price for every house gives a CV RMSE of 0.408 (Step 0), and Ridge on the raw price gives 0.155 (Step 1)."),
+
+  h2("3.4. Feature engineering"),
+  h3("3.4.1. Feature construction."),
+  body("We keep the same Ridge model (alpha = 10) and change one thing per step (Table 1). Our notebook prints the change after every step (Figure 7)."),
+  ...table(1, "Feature engineering steps (Ridge, five-fold CV RMSE)",
+    ["Step", "Change", "CV RMSE"],
+    [
+      ["1", "Raw price (baseline)", "0.15534"],
+      ["2", "Predict log(SalePrice)", "0.15206"],
+      ["3", "Label NA by meaning; MSSubClass as text", "0.15106"],
+      ["4", "TotalSF, TotalBathrooms, ages, TotalPorchSF", "0.15121"],
+      ["5", "log1p of 20 skewed area features", "0.13239"],
+      ["6", "Drop 2 outliers from training folds", "0.12766"],
+    ],
+    [500, 3093, 1100]),
+  ...figure(F("f14_console.png"), 7, "Notebook output for Steps 0 to 6"),
+  body("In Step 3, we replace NA with a label such as NoGarage only when another feature confirms it: GarageType becomes NoGarage only if GarageArea is 0. We also turn MSSubClass into text, because its values (20, 60, 190 and so on) are codes for house types. In Step 5, we take log1p of every area feature with a training skewness above 0.75, which covers 20 of our 21 area features. In Step 6, we remove the two outliers from the training rows of each fold, but they are still predicted and scored. Figure 8 shows how much larger the Step 5 drop is than the others."),
+  ...figure(F("f07_staircase.png"), 8, "CV RMSE after each feature step"),
+  h3("3.4.2. Difficulties & trials on improvement."),
+  item(["1.", "New features did nothing"], "Step 4 left the CV score unchanged (+0.00014). Ridge can already add two features together by giving them equal weights, so TotalSF gave it nothing new. We kept these features because log(TotalSF) adds new information after Step 5, and tree models cannot add features by themselves."),
+  item(["2.", "Our outlier rule stopped working"], "Our first rule checked GrLivArea > 4000 inside the CV function, and Step 6 scored exactly the same as Step 5. Step 5 had replaced GrLivArea with its log, whose maximum is 8.64, so no house matched. We now compute the outlier mask once from the raw data, and a test fails if the two steps ever score the same again."),
+  item(["3.", "Labelling NA gave little"], "Step 3 only improved CV by 0.0010. The Pipeline already turned missing text into a \"Missing\" category, which the model used in the same way as our labels."),
+  h3("3.4.3. Reflection."),
+  body("Step 5 gave the largest gain (-0.0188, about 12%). Step 2 alone gave only -0.0033 because the features were still on their raw scale, so the log target and the log features work as a pair. Finally, we tuned Ridge's alpha. The CV score forms a U shape (Figure 9): a small alpha overfits and a large one underfits. Our first guess of 10 was already the best."),
+  ...figure(F("f08_alpha.png"), 9, "Ridge alpha against CV RMSE"),
+
+  h2("3.5. Model comparison"),
+  h3("3.5.1. Training."),
+  body("With the features fixed, we compared seven models on the same folds, all predicting log price and trained without the two outliers (Table 2, Figure 10). The linear models and SVR use the log features and one-hot encoding. CatBoost uses the features from Step 4 and handles the text features itself."),
+  ...table(2, "Single models (CV RMSE and time for the full CV)",
+    ["Model", "Family", "CV RMSE", "Time"],
+    [
+      ["XGBoost", "Boosted trees", "0.12310", "4 s"],
+      ["CatBoost", "Boosted trees", "0.12320", "86 s"],
+      ["SVR (RBF)", "Kernel", "0.12349", "5 s"],
+      ["Lasso", "Linear", "0.12546", "2 s"],
+      ["ElasticNet", "Linear", "0.12565", "3 s"],
+      ["Ridge", "Linear", "0.12766", "0.4 s"],
+      ["Random Forest", "Bagged trees", "0.13822", "12 s"],
+    ],
+    [1393, 1400, 1000, 900]),
+  ...figure(F("f09_models.png"), 10, "CV RMSE of the seven models"),
+  h3("3.5.2. Difficulties & trials on improvement."),
+  item(["1.", "SVR settings at the edge"], "The best C and gamma kept landing on the edge of our grid, so we widened the grid twice. We then checked four pairs just outside the final corner (C = 1, gamma = 0.003), and all four scored worse."),
+  item(["2.", "CatBoost could not be copied"], "Our CV function copies the model for each fold with scikit-learn's clone, which failed for CatBoost when we passed the text features as a list. Passing them as a tuple fixed it."),
+  h3("3.5.3. Reflection."),
+  body("Random Forest was the weakest model, behind even Ridge. Averaging many deep trees removes random errors, but after Step 5 the main relationships are close to straight lines, and every tree approximates them with the same steps. Boosting adds small trees one after another, and each tree fixes the error that is left, so XGBoost and CatBoost came first. Lasso beat Ridge because it kept only 107 of the 324 columns and set the rest to zero."),
+  body("Figure 16 shows the difference between bagging and boosting in a small experiment with five features, where we train on 80% of the houses and validate on the rest. More trees help Random Forest at first but soon stop helping, while boosting keeps improving as it adds trees and reaches a lower error. Boosting is best at about 140 trees here and then gets slightly worse, so the number of trees is a setting we have to choose too."),
+  ...figure(F("f16_bagging_boosting.png"), 16, "Bagging and boosting on a five-feature hold-out experiment"),
+
+  h2("3.6. Blending"),
+  body("A blend helps only when its members make different mistakes. Figure 11 shows how strongly the models' OOF residuals correlate. Ridge, Lasso and ElasticNet correlate at 0.99 or more, so they make almost the same errors. The linear models and the boosted trees correlate at about 0.88."),
+  ...figure(path.join(V2FIGS, "06_oof_correlation.png"), 11, "Correlation between the models' OOF residuals", 280),
+  body("Before we looked at any blend score, we fixed a rule: take the best model of each family and keep both boosting models. This gives Lasso, XGBoost, CatBoost and SVR. We average them with equal weights, because weights tuned on the same 1,460 OOF predictions would fit their noise. The blend scores 0.1191 (Table 3). Adding every model except Random Forest makes it worse, because three almost identical linear models then hold three of the six votes."),
+  ...table(3, "Blends compared after the rule was fixed",
+    ["Blend", "CV RMSE"],
+    [
+      ["Best single model (XGBoost)", "0.12310"],
+      ["XGBoost + CatBoost", "0.12099"],
+      ["Lasso + XGBoost", "0.12044"],
+      ["Our blend (4 models)", "0.11906"],
+      ["All except Random Forest", "0.12022"],
+    ],
+    [3293, 1400]),
+
+  h1("4. Test on Kaggle"),
+  h2("4.1. Leaderboard results"),
+  body("Table 4 and Figure 13 put our CV scores next to the Kaggle scores. Up to S4, both go down together. After that they disagree. CatBoost (S5) beat Ridge (S4) on CV but not on Kaggle, and our blend (S6) scored worse than our first attempt (0.12037 against 0.11745)."),
+  ...table(4, "CV and Kaggle scores of every submission",
+    ["Submission", "CV", "Kaggle"],
+    [
+      ["S1 Ridge, raw price", "0.15534", "0.14188"],
+      ["S2 Log target, NA, features", "0.15121", "0.13044"],
+      ["S3 Log of skewed areas", "0.13239", "0.12253"],
+      ["S4 Outliers dropped", "0.12766", "0.12236"],
+      ["S5 CatBoost", "0.12320", "0.12310"],
+      ["S6 Blend", "0.11906", "0.12037"],
+      ["S7 Step 13", "0.11910", "0.11624"],
+      ["First attempt", "0.12117", "0.11745"],
+    ],
+    [2693, 1000, 1000]),
+  ...placeholderFigure(12, "Our team on the Kaggle leaderboard", "[Insert screenshot: team name and score 0.11624]"),
+  ...figure(F("f11_cv_vs_kaggle.png"), 13, "Our CV and Kaggle scores for S1 to S7"),
+  body("Some of this is noise. When we scored the five folds separately, the same Ridge model ranged from 0.105 to 0.172. A leaderboard score is one more sample of this kind, so a difference of 0.001 between two submissions means little. To find out whether anything real was behind the gap, we looked at where our CV error came from."),
+  h2("4.2. Error analysis"),
+  body("Two houses dominate our CV error: the outliers 524 and 1299. Our blend priced them at about 3.5 and 4 times their real value (log errors -1.25 and -1.40). These two errors make up 17% of the total squared error; without them, our CV RMSE would be 0.1085 instead of 0.1191. Both houses also sit in fold 3, so our CV never trains on one of them while predicting the other."),
+  body("The test set has a third house of this kind. Id 2550 has 5,095 sq ft, the top quality rating of 10, and a Partial sale. Since Steps 6 to 12 removed its two look-alikes from training, our models predicted $565,000 to $763,000 for it (Figure 14). Our first attempt predicted $491,000. Its CatBoost was trained with the outliers and predicted $306,000, while the same model without them predicted $618,000."),
+  ...figure(F("f12_id2550.png"), 14, "Our predictions for test house Id 2550"),
+  h2("4.3. Step 13"),
+  body("In Step 13, we keep the two outliers in training and add a feature, HugePartial, which is 1 for houses over 4,000 sq ft sold as Partial sales. A model can then learn a separate adjustment for this kind of sale without changing anything for other houses. We compute the flag from the raw area, as in Step 6. We also found a garage built in 2207 in the test set (Id 2593), so we treat garage years later than the sale year plus one as missing."),
+  body("Normal CV cannot test this change, so we designed our own check. We held out one outlier, trained on all other houses and predicted it, and then did the same for the other one (Figure 15). With the earlier method, the blend was 3.6 to 4.4 times too high. With Step 13, it was 1.3 to 1.9 times too high."),
+  ...figure(F("f13_loo.png"), 15, "Leave-one-outlier-out check"),
+  body("We refitted the same four models with the same settings and equal weights. The CV score stayed at 0.1191, because CV cannot see this effect. The prediction for Id 2550 fell from $643,000 to $260,000, and the other test houses changed by a median of 0.25%. We submitted it once, as S7, and it scored 0.11624, our best score and better than our first attempt."),
+  h2("4.4. Reflection"),
+  body("We also tried four other ideas on the Step 13 features, and none of them beat our blend (Table 5). Step 13 came from looking at the leaderboard, so we submitted it only once and did not try variants against the leaderboard."),
+  ...table(5, "Ideas we tried and did not keep",
+    ["Idea", "CV RMSE"],
+    [
+      ["Our Step 13 blend", "0.11910"],
+      ["Stacking with learned weights", "0.12260"],
+      ["First attempt's recipe (Lasso + CatBoost)", "0.12026"],
+      ["Lasso + first attempt's quality features", "0.12606"],
+      ["Blend with 3-seed XGBoost", "0.11911"],
+    ],
+    [3393, 1300]),
+
+  h1("5. Answers to the questions"),
+  h2("5.1. Most useful feature engineering"),
+  body("Taking log1p of the skewed area features (Step 5) was the most useful. It cut our CV error from 0.1512 to 0.1324, about 12%, and Kaggle agreed (0.13044 to 0.12253). House prices grow roughly in proportion to size, so log price is close to a straight line in log area, which is the shape a linear model can fit. The log also shrinks a few very large values, such as huge lots, that would otherwise pull the regression line towards them."),
+  h2("5.2. Best improvement"),
+  body("Our biggest improvement on Kaggle was from S1 to S2, from 0.14188 to 0.13044 (-0.0114, or 8.1%). S2 combined three changes: predicting the log price, labelling missing values, and the new features. Our CV shows that the log target gave most of that gain (-0.0033 of -0.0041). The improvement we learned most from was S6 to S7 (0.12037 to 0.11624), which came from the error analysis in Section 4."),
+
+  h1("6. General limitation"),
+  item(["1.", "One CV for every choice"], "We made all our choices with the same five folds, so our CV scores are slightly optimistic."),
+  item(["2.", "Two examples"], "Step 13 learns from only two training houses."),
+  item(["3.", "Bundled submission"], "S2 contained three changes, so we cannot split its Kaggle gain. Next time, we would submit after every step and spread rare houses across different folds."),
+
+  h1("7. Summary"),
+  body("In this project, we rebuilt a Kaggle solution step by step and measured every decision. Our CV error fell from 0.155 to 0.119, and our Kaggle score fell from 0.142 to 0.116. Log-transforming the skewed areas gave the largest gain, boosted trees were the best single models, and a blend of models that make different mistakes improved the score again. The most useful lesson came at the end: the leaderboard showed us a blind spot in our CV, and looking at individual errors fixed it better than trying more models."),
+
+  h1("Appendix"),
+  body([{ b: "A. Notebook. " }, "Kaggle notebook: [link]. Repository with the notebook and our study notes: [link]."]),
+  body([{ b: "B. Individual answers. " }, "[Each member answers: main role; main difficulties for the team and for themselves; what they learned.]"]),
+];
+
+// ---------- document ----------
+const runningHeader = new Header({ children: [new Paragraph({ alignment: AlignmentType.CENTER,
+  children: [run("House Price Prediction", { italics: true, size: 18 })] })] });
+const pageFooter = new Footer({ children: [new Paragraph({ alignment: AlignmentType.RIGHT,
+  children: [new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: 18, bold: true })] })] });
+const margins = { top: 1080, right: 1080, bottom: 1080, left: 1080 };
 
 const doc = new Document({
   creator: "[team name]",
-  title: "House Prices Kaggle report",
+  title: "House Price Prediction",
   styles: {
     default: { document: { run: { font: FONT, size: 24 } } },
     paragraphStyles: [
-      {
-        id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true,
+      { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true,
         run: { font: FONT, size: 28, bold: true },
-        paragraph: { spacing: { before: 280, after: 120 }, keepNext: true, outlineLevel: 0 },
-      },
-      {
-        id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true,
-        run: { font: FONT, size: 24, bold: true, italics: true },
-        paragraph: { spacing: { before: 160, after: 80 }, keepNext: true, outlineLevel: 1 },
-      },
+        paragraph: { spacing: { before: 240, after: 100 }, keepNext: true, outlineLevel: 0 } },
+      { id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { font: FONT, size: 24, bold: true },
+        paragraph: { spacing: { before: 160, after: 60 }, keepNext: true, outlineLevel: 1 } },
+      { id: "Heading3", name: "Heading 3", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { font: FONT, size: 24, bold: true, italics: true, color: BLUE },
+        paragraph: { spacing: { before: 120, after: 40 }, keepNext: true, outlineLevel: 2 } },
     ],
   },
-  sections: [{
-    properties: {
-      page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } },
+  sections: [
+    {
+      properties: { page: { margin: margins }, titlePage: true },
+      headers: { default: runningHeader, first: new Header({ children: [new Paragraph({ children: [] })] }) },
+      footers: { default: pageFooter, first: pageFooter },
+      children: titleBlock,
     },
-    footers: {
-      default: new Footer({
-        children: [new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: 20 })],
-        })],
-      }),
+    {
+      properties: { type: SectionType.CONTINUOUS, page: { margin: margins },
+        column: { count: 2, space: 360, equalWidth: true } },
+      headers: { default: runningHeader },
+      footers: { default: pageFooter },
+      children: B,
     },
-    children,
-  }],
+  ],
 });
 
 Packer.toBuffer(doc).then((buffer) => {
