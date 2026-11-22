@@ -123,7 +123,7 @@ Claude 的決定：用 `git mv`，舊方案嘅歷史唔會唔見；root 只留 R
 
 - 一次交付一個 Part：notebook 新加嘅幾格 + 學習筆記。學生喺 Kaggle 跑，貼返結果，問到明晒先去下一個 Part。
 - **Claude 喺本地跑過先交付**，確保 code 行得通、個數字同筆記講嘅一致。
-  - 本地要有數據：用 Kaggle API token（經 secure credential 提供），或者學生上載 `train.csv` / `test.csv`。
+  - 數據已經喺 11/22 經 Kaggle API 下載咗，放喺 `house-prices-advanced-regression-techniques/`（包括 train 1460 行、test 1459 行、sample_submission、data_description）。
   - 數據唔會 commit（已經喺 `.gitignore`）。
 - 時間表：
   - 11/23：Part 1–2
