@@ -202,3 +202,24 @@ Shared notebook names, defined once and reused by later Parts:
 - [ ] **Step 4:** Build, execute and run the full test suite. Expected: all PASS.
 - [ ] **Step 5:** Write the notes. Cover why blending works and why the weights aren't tuned.
 - [ ] **Step 6:** Commit with message `v2 Part 5: blend and summary` and push. **Hand off.**
+
+---
+
+### Task 7: Part 6 — Error analysis and Step 13 (added 2026-11-23, approved by the student)
+
+**Files:**
+- Create: `v2/src/part6_error_analysis.py`, `v2/notes/part6_error_analysis.md`
+- Modify: `v2/tests/test_outputs.py`, `v2/results/kaggle_log.csv` (add an s7 row), `v2/src/part5_blend.py` (summary wording: Step 12 is no longer final)
+
+**Interfaces:**
+- Consumes: `outlier`, `train`, `test`, `X_final`, `X_test_final`, `X_cat`, `X_cat_test`, `y`, `y_log`, `kf`, `cv_evaluate`, `record`, `save_submission`, `linear_pipeline`, `lasso_alpha`, `catboost`, `best_C`, `best_gamma`, `blend_oof`, `blend_test`, `test_preds`, `summary`.
+- Produces: `clean_years(df) -> DataFrame`, `add_huge_partial_flag(df, raw) -> DataFrame`, `make_xgb(seed=42)`, `oof13`, `test13`, step "13", `submissions/s7_outlier_flag.csv`.
+
+- [ ] **Step 1: Write the failing tests**
+  - `test_part6_helpers`: extract the two functions with `ast`. Check that `clean_years` turns GarageYrBlt 2207 (YrSold 2007) into NaN and keeps 2008 when YrSold is 2007. Check that `add_huge_partial_flag` flags from the **raw** area even when the frame's GrLivArea is logged.
+  - `test_step13_submission`: step "13" is in cv_results and `s7_outlier_flag.csv` exists.
+  - `test_s7_lowers_huge_partial_prediction`: s7's prediction for Id 2550 is below 0.6 × s6's.
+- [ ] **Step 2:** Run the tests. Expected: FAIL.
+- [ ] **Step 3:** Write the Part 6 cells: Kaggle table, outlier contribution and folds, test Id 2550 predictions, the two helpers, the leave-one-outlier-out check, Step 13 CV and S7, the tried-and-not-kept table, and the updated submission summary.
+- [ ] **Step 4:** Run `build.py --execute` and the full test suite. Expected: all PASS.
+- [ ] **Step 5:** Write the Cantonese notes with real outputs, then commit and push.

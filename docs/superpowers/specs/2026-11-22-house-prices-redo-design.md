@@ -149,3 +149,24 @@ Claude 的決定：用 `git mv`，舊方案嘅歷史唔會唔見；root 只留 R
 - alpha 試邊幾個值、Random Forest 同 CatBoost 嘅參數，只要合理同跑得快就得
 - notebook 點交付俾學生，例如每個 Part 更新同一本 `.ipynb`，學生 copy 新嘅幾格入 Kaggle
 - 預計結果數字唔使同舊方案一樣，以實際跑出嚟嘅為準
+
+---
+
+## 11. 補充（2026-11-23，學生 approve）：Part 6 Error analysis
+
+**原因：** Kaggle 分數顯示 S5（CatBoost）差過 S4，S6（0.12037）差過舊版 v1（0.11745）。學生希望重做嘅版本唔好差過第一次。
+
+**Spike 結果（用同一個 5-fold CV）：**
+- v1 嘅質素特徵、v1 嘅 blend（Lasso + CatBoost 50/50）、stacking、seed averaging 都冇改善。
+- 兩間 train outlier（Id 524、1299）啱啱喺同一個 fold，所以 CV 測試唔到「由一間學、估另一間」。
+- test 有一間同類嘅屋（Id 2550：5095 呎、Partial sale），v1 同 v2 喺佢身上分歧最大。
+- 專門驗證：保留另一間 outlier + `HugePartial` 標記，log 誤差由 −1.28 / −1.49 收窄到 −0.27 / −0.64。
+- test Id 2593 嘅 GarageYrBlt 係 2207（寫錯）。
+
+**Part 6 內容：**
+- Kaggle 分數 vs CV 表；兩間 outlier 嘅誤差貢獻同 fold 位置；test Id 2550 喺各 submission 嘅估價；專門驗證。
+- **Step 13：** `clean_years`（GarageYrBlt > YrSold + 1 → 缺失）+ 保留 outlier + `HugePartial` 標記（用原始面積計），4 個 model 用返完全一樣嘅設定，等權重 blend，出 **S7**。
+- 「試過但唔採用」：stacking、XGBoost seed averaging、v1 嘅 blend 同質素特徵，全部喺 notebook 入面用 CV 計。
+- 只交一次 Kaggle（S7），唔做 leaderboard probing。報告要坦白講：呢一步係由 leaderboard 結果觸發嘅 error analysis。
+
+**反目標：** 人手改任何 test 預測；用 test 答案或者外部 Ames 數據；為咗 leaderboard 交好多個版本。
