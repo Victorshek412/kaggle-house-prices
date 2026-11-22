@@ -1,7 +1,7 @@
 submission,step,cv_rmse,kaggle_score,submitted_on,notes
-s1_ridge_raw,1,0.15534,,,
-s2_new_features,4,0.15121,,,
-s3_log_features,5,0.13239,,,
-s4_no_outliers,6b,0.12766,,,
-s5_catboost,10,0.12320,,,
-s6_blend,12,0.11906,,,
+s1_ridge_raw,1,0.15534,0.14188,2026-11-22,
+s2_new_features,4,0.15121,0.13044,2026-11-22,largest Kaggle improvement (-0.01144); bundles steps 2-4
+s3_log_features,5,0.13239,0.12253,2026-11-22,single change: log1p of skewed areas (-0.00791)
+s4_no_outliers,6b,0.12766,0.12236,2026-11-22,
+s5_catboost,10,0.12320,0.12310,2026-11-22,slightly worse than s4 on Kaggle although CV was better
+s6_blend,12,0.11906,0.12037,2026-11-22,final v2 submission; v1 recommended.csv scored 0.11745 earlier
