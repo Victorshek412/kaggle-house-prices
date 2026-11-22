@@ -74,15 +74,21 @@ results = pd.DataFrame(columns=["step", "description", "cv_rmse"])
 
 
 def record(step, description, cv_rmse):
-    """Add one row to the results table, print the change, and save the table."""
+    """Add one row to the results table (or replace it if the step was run before), print the
+    change versus the previous row, and save the table."""
     global results
-    if len(results):
-        change = cv_rmse - results.cv_rmse.iloc[-1]
+    step = str(step)
+    row = pd.DataFrame([{"step": step, "description": description, "cv_rmse": cv_rmse}])
+    if step in results.step.tolist():  # re-running a cell: replace its row, don't duplicate it
+        results.loc[results.step == step, ["description", "cv_rmse"]] = [description, cv_rmse]
+    else:
+        results = row if results.empty else pd.concat([results, row], ignore_index=True)
+    position = results.step.tolist().index(step)
+    if position > 0:
+        change = cv_rmse - results.cv_rmse.iloc[position - 1]
         print(f"Step {step}: CV RMSE {cv_rmse:.5f} ({change:+.5f} vs previous step)")
     else:
         print(f"Step {step}: CV RMSE {cv_rmse:.5f}")
-    row = pd.DataFrame([{"step": str(step), "description": description, "cv_rmse": cv_rmse}])
-    results = row if results.empty else pd.concat([results, row], ignore_index=True)
     results.to_csv(OUT_DIR / "cv_results.csv", index=False)
 
 
@@ -110,7 +116,7 @@ record("0", "Predict the mean price", score)
 # %% [markdown]
 # ### Step 1: Ridge regression on the raw data
 # Ridge is linear regression with a penalty on large coefficients, $\alpha\sum_j \beta_j^2$.
-# With about 270 columns after one-hot encoding and only 1,460 houses, plain linear
+# With about 300 columns after one-hot encoding and only 1,460 houses, plain linear
 # regression would overfit. The penalty keeps the coefficients modest.
 #
 # Here we train on **raw dollar prices** with only the minimum preprocessing. Every later step
@@ -124,7 +130,7 @@ save_submission("s1_ridge_raw", test_step1)
 
 # %% [markdown]
 # ### Reading the numbers
-# A CV RMSE of 0.40 (Step 0) means a typical miss of about $e^{0.40}-1 \approx 49\%$.
+# A CV RMSE of 0.41 (Step 0) means a typical miss of about $e^{0.41}-1 \approx 50\%$.
 # Ridge cuts that to about 0.155, a typical miss of roughly 17%. But Step 1 still trains on
 # dollars while being scored in logs. Nothing stops a dollar model from predicting a price of
 # zero or less, so `cv_evaluate` puts a floor under raw predictions. It wasn't triggered here,

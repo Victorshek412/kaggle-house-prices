@@ -13,6 +13,9 @@
 # models. Part 5 blends them. Every step's score goes into one results table, so the whole
 # pathway can be read off at the end.
 #
+# *Numbers quoted in the text come from the reference run. A run on Kaggle may differ slightly
+# (around the 4th decimal) because library versions differ.*
+#
 # ## Part 1: Exploratory data analysis (EDA)
 
 # %%
@@ -24,10 +27,16 @@ import matplotlib.pyplot as plt
 
 # On Kaggle the data sits under /kaggle/input; locally it sits next to this repo's v2 folder.
 CANDIDATES = [Path("/kaggle/input/house-prices-advanced-regression-techniques"),
+              *sorted(path.parent for path in Path("/kaggle/input").glob("**/train.csv")),
               Path("../house-prices-advanced-regression-techniques"),
               Path("house-prices-advanced-regression-techniques")]
-DATA_DIR = next(path for path in CANDIDATES if (path / "train.csv").exists())
-OUT_DIR = Path("/kaggle/working") if Path("/kaggle/working").exists() else Path("results")
+DATA_DIR = next((path for path in CANDIDATES if (path / "train.csv").exists()), None)
+if DATA_DIR is None:
+    raise FileNotFoundError("Could not find train.csv. Looked in: " + ", ".join(map(str, CANDIDATES))
+                            + ". On Kaggle, attach the competition data with 'Add Input'.")
+
+ON_KAGGLE = Path("/kaggle/working").exists()
+OUT_DIR = Path("/kaggle/working") if ON_KAGGLE else DATA_DIR.parent / "v2" / "results"
 (OUT_DIR / "figures").mkdir(parents=True, exist_ok=True)
 
 
@@ -53,7 +62,7 @@ train.head()
 
 # %% [markdown]
 # ### 1.2 The target: SalePrice
-# Most houses sell for $130k–$215k, but a long tail runs up to $755k. A *right-skewed*
+# The middle half of houses sell for $130k–$214k, but a long tail runs up to $755k. A *right-skewed*
 # target like this pulls a linear model towards the few expensive houses. Taking the log
 # makes the distribution almost symmetric, and it is also the scale Kaggle scores on.
 

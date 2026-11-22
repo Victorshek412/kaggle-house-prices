@@ -1,6 +1,6 @@
 # Part 2 學習筆記：Baseline 同 Cross-validation
 
-> 呢個 Part 係成本 notebook 嘅**地基**。之後每一步都會用到呢度寫嘅 4 個工具：
+> 呢個 Part 係成個 notebook 嘅**地基**。之後每一步都會用到呢度寫嘅 4 個工具：
 > `make_linear_preprocessor`、`cv_evaluate`、`record`、`save_submission`。
 > 呢度明晒，之後每一步就只係「改一樣嘢，再量一次」。
 
@@ -59,8 +59,11 @@ Baseline 係一個「最笨嘅答案」，俾你知「乜都唔做」會得幾�
 1. **Impute（填缺失）**
    - 數字欄用 median。點解唔用 mean？因為 median 唔會被極端值拉走。
    - 文字欄填 `"Missing"`，將「缺失」當成一個類別。
-2. **Scale（標準化）**：將每個數字欄變成平均 0、標準差 1。Ridge 嘅 penalty 會對每個係數一視同仁。如果唔標準化，以「平方呎」計嘅欄（數值幾千）同以「間」計嘅欄（數值 1–4）就唔公平。
-3. **One-hot encoding**：model 只識數字，所以要將文字欄轉做 0/1 欄。例如 `Street = Pave / Grvl` 會變成 `Street_Pave` 同 `Street_Grvl` 兩欄。79 欄做完之後大約變成 270 欄。
+2. **Scale（標準化）**：將每個數字欄變成平均 0、標準差 1（公式同例子 → Part 0 §4.6）。
+   - **點解 Ridge 需要？** 舉個例：面積每多 1 呎可能只值 50 蚊（係數 50），睡房每多 1 間值 10,000 蚊（係數 10000）。
+   - Ridge 嘅 penalty 罰嘅係「係數²」，所以睡房嘅大係數會被罰到幾乎用唔到，只係因為佢嘅單位（間）細，唔係因為佢唔重要。
+   - 標準化之後，兩欄都喺同一把尺上，係數大細先反映真正嘅重要性，penalty 先公平。
+3. **One-hot encoding**：model 只識數字，所以要將文字欄轉做 0/1 欄。例如 `Street = Pave / Grvl` 會變成 `Street_Pave` 同 `Street_Grvl` 兩欄。79 欄做完之後大約變成 **300 欄**（36 個數字欄 + 大約 268 個 one-hot 欄）。去到 Part 4 會變成 324 欄，因為 Part 3 加咗新特徵、`MSSubClass` 變咗類別、多咗 NoGarage 呢類標籤。
 
 ### 1.5 Ridge regression
 
@@ -76,7 +79,7 @@ Ridge 喺後面加多一個 penalty：
 盡量細：Σ (真實 − 估計)²  +  alpha × Σ (係數)²
 ```
 
-- **直覺：** 270 欄但只有 1460 行，普通回歸好容易「死記」訓練數據（overfit），某啲係數會變得好大。penalty 就係話「係數越大越要罰」，逼 model 簡單啲。
+- **直覺：** 大約 300 欄但只有 1460 行，普通回歸好容易「死記」訓練數據（overfit），某啲係數會變得好大。penalty 就係話「係數越大越要罰」，逼 model 簡單啲。
 - `alpha` 越大，罰得越重。0 代表等於普通回歸；太大就乜都學唔到（underfit）。
 - Part 3 會用 CV 揀 alpha。
 
@@ -89,7 +92,10 @@ Ridge 喺後面加多一個 penalty：
 ```python
 from sklearn.base import clone
 ```
-`clone(model)` 會整一個**全新、未訓練過**嘅 model 副本，每個 fold 都要由零開始。冇咗佢，第 2 輪會喺第 1 輪訓練過嘅 model 上面繼續訓練，即係 leakage。
+`clone(model)` 會整一個**全新、未訓練過**嘅 model 副本，設定一樣，但乜都未學。
+
+- **點解要用？** 確保每個 fold 用一個乾淨、獨立嘅 model，亦唔會改動外面傳入嚟嘅 `model`。
+- 老實講，我哋用嘅 model（Ridge、Pipeline、XGBoost、CatBoost）每次 `fit` 本身都會由零開始，所以冇 `clone` 分數都會一樣。呢度主要係**保險同清晰**：有啲 model（例如設咗 `warm_start=True`）會喺上一次嘅結果上面繼續學，嗰陣冇 `clone` 就會出事。
 
 ```python
 from sklearn.compose import ColumnTransformer, make_column_selector
@@ -118,8 +124,11 @@ def make_linear_preprocessor():
                             ("onehot", OneHotEncoder(handle_unknown="ignore"))])
 ```
 - 文字欄：缺失填 `"Missing"`，然後做 one-hot。
-- `handle_unknown="ignore"`：如果 test 出現 training 從未見過嘅類別，就將佢所有 one-hot 欄設做 0，而唔係報錯。
-- 冇咗呢個設定會點：Part 1 見到有啲類別只喺 test 出現，冇咗呢句 notebook 就會爆。
+- `handle_unknown="ignore"`：如果預測時出現訓練時從未見過嘅類別，就將佢所有 one-hot 欄設做 0，而唔係報錯。
+- **幾時會發生？** 有兩種情況：
+  1. 喺 CV 入面，某個罕見類別可能只出現喺驗證嗰份，訓練嗰 4 份從未見過。
+  2. Part 3 Step 3 將 `MSSubClass` 變成類別之後，代號 `"150"` 只係喺 test 出現。
+- 冇咗呢個設定，就會喺上面兩種情況報錯，notebook 停低。
 
 ```python
     return ColumnTransformer([
@@ -132,7 +141,7 @@ def make_linear_preprocessor():
 ```python
 def cv_evaluate(model, X, y, X_test, target="log", drop_outliers=False):
 ```
-成本 notebook 最重要嘅 function。輸入 model 同數據，輸出三樣嘢：CV 分數、OOF 預測、test 預測。
+成個 notebook 最重要嘅 function。輸入 model 同數據，輸出三樣嘢：CV 分數、OOF 預測、test 預測。
 
 - `target`：決定學 log 價錢定原價。
 - `drop_outliers`：Step 6 先會用到。
@@ -157,10 +166,10 @@ def cv_evaluate(model, X, y, X_test, target="log", drop_outliers=False):
         if drop_outliers:
             train_idx = train_idx[~outlier.values[train_idx]]
 ```
-- `outlier` 係 Part 1.4 用**原始數據**計出嚟嘅 True/False mask。
+- `outlier` 係 Part 1（Cell 5）用**原始數據**計出嚟嘅 True/False mask。
 - `outlier.values[train_idx]` 會攞出訓練行各自係咪 outlier；`~` 將 True/False 反轉（→ Part 0 §2.3），即係「唔係 outlier 嘅先留低」。
 - 只喺**訓練行**入面拎走 outlier。
-- **點解唔喺呢度直接寫 `X.GrLivArea > 4000`？** 因為 Part 3 Step 5 會將 GrLivArea 取 log，log 之後最大都係 8.6 左右，「> 4000」就永遠唔會成立。第一版 code 真係中咗呢個伏，Step 6 完全冇效果。詳情見 Part 3 筆記。
+- **點解唔喺呢度直接寫 `X.GrLivArea > 4000`？** 因為 Part 3 Step 5 會將 GrLivArea 取 log，log 之後最大都係 8.6 左右，「> 4000」就永遠唔會成立。第一版 code 真係中咗呢個伏，Step 6 完全冇效果。詳情見 Part 3 筆記 §6.3。
 - `valid_idx` 完全冇郁，outlier 照樣要被估、照樣計分。
 
 ```python
@@ -176,7 +185,7 @@ def cv_evaluate(model, X, y, X_test, target="log", drop_outliers=False):
 ```
 - 用訓練行學 log 價錢。
 - 估驗證行，放入 `oof_log` 對應嘅位置。
-- 同時估 test，每輪加 1/5，即係 **5 個 model 嘅平均**。平均多個 model 嘅結果，比只信一個 model 穩定。
+- 同時估 test，每輪加 1/5（`kf.n_splits` 就係 5，即係 fold 嘅數目），5 輪加完就係 **5 個 model 嘅平均**。平均多個 model 嘅結果，比只信一個 model 穩定。
 
 ```python
         else:
@@ -188,7 +197,7 @@ def cv_evaluate(model, X, y, X_test, target="log", drop_outliers=False):
 - 學原價（Step 0、1 用）。
 - 線性 model 估原價，理論上可以估出負數，但 `log(負數)` 係冇定義嘅，會爆。
 - `np.clip(…, floor, None)` 嘅意思係「低過 floor 就當 floor」。floor 設做訓練數據最平價錢嘅一半。
-- 今次實際冇一個預測撞到 floor（最低嘅預測都有 27,000 蚊），但留住佢做保險。
+- floor 大約係 17,450 蚊（最平嘅訓練屋 34,900 蚊嘅一半）。今次實際冇一個預測低過 floor，但留住佢做保險。
 - 估完再轉做 log，因為計分要用 log。
 
 ```python
@@ -199,23 +208,50 @@ def cv_evaluate(model, X, y, X_test, target="log", drop_outliers=False):
 
 ```python
 results = pd.DataFrame(columns=["step", "description", "cv_rmse"])
-
-def record(step, description, cv_rmse):
-    global results
 ```
-- `results` 係成本 notebook 共用嘅成績表。
-- `global` 係話俾 Python 聽，喺 function 入面改嘅係外面嗰個 `results`，唔係開一個新嘅。
+開一張空嘅成績表，有 3 欄：step 編號、描述、CV 分數。成個 notebook 都會共用佢。
 
 ```python
-    if len(results):
-        change = cv_rmse - results.cv_rmse.iloc[-1]
+def record(step, description, cv_rmse):
+    global results
+    step = str(step)
+    row = pd.DataFrame([{"step": step, "description": description, "cv_rmse": cv_rmse}])
 ```
-同上一行（`iloc[-1]` 即係最後一行）比較。**負數代表進步**，因為誤差細咗。
+- 三個引號嘅 docstring 喺呢度省略咗（→ Part 0 §1.3）。
+- `global` 係話俾 Python 聽，喺 function 入面改嘅係外面嗰個 `results`，唔係開一個新嘅。
+- `str(step)`：將 step 變做文字。因為有 "6b"、"7b" 呢類編號，全部用文字先一致。
+- `row`：用一個 dict 砌一張得**一行**嘅小表（dict 外面加 `[ ]`，即係「一個 dict = 一行」）。
+
+```python
+    if step in results.step.tolist():  # re-running a cell: replace its row, don't duplicate it
+        results.loc[results.step == step, ["description", "cv_rmse"]] = [description, cv_rmse]
+    else:
+        results = row if results.empty else pd.concat([results, row], ignore_index=True)
+```
+- **處理重跑：** 如果呢個 step 已經記錄過（例如你喺 Kaggle 重跑咗某一格），就**覆蓋**舊嗰行，唔好重複加多一行。冇咗呢個處理，成績表會有兩行 step 5，Part 5 嘅圖同總表就會亂。
+- 未記錄過就加入新行：
+  - `results.empty`：張表係咪仲未有任何行。
+  - 係嘅話，新表就係 `row` 本身；
+  - 否則用 `pd.concat` 將 `row` 疊喺舊表下面。`ignore_index=True` 即係重新編行號 0, 1, 2…。
+  - 呢句係一行 if（→ Part 0 §1.8）。
+
+```python
+    position = results.step.tolist().index(step)
+    if position > 0:
+        change = cv_rmse - results.cv_rmse.iloc[position - 1]
+        print(f"Step {step}: CV RMSE {cv_rmse:.5f} ({change:+.5f} vs previous step)")
+    else:
+        print(f"Step {step}: CV RMSE {cv_rmse:.5f}")
+```
+- `position`：呢個 step 喺表入面排第幾（由 0 數起）。`.index(step)` 係 list 嘅 method，回傳某個值嘅位置。
+- 唔係第一行嘅話，就同**佢上一行**比較，計出變化 `change`。**負數代表進步**，因為誤差細咗。
+- `{change:+.5f}`：5 個小數位，而且一定顯示正負號（→ Part 0 §1.7），所以會見到 `+0.00014` 或者 `-0.01882`。
+- 第一行（step 0）冇上一行可以比，所以只印分數。
 
 ```python
     results.to_csv(OUT_DIR / "cv_results.csv", index=False)
 ```
-每次都存檔。最後畫「進步樓梯」圖同寫報告，都係用呢個檔案。
+每次都存檔。最後畫「進步樓梯」圖同寫報告，都係用呢個檔案。`index=False` 即係唔好將行號寫入檔案。
 
 ```python
 def save_submission(name, test_log):
@@ -228,8 +264,16 @@ def save_submission(name, test_log):
     assert np.isfinite(submission.SalePrice).all() and (submission.SalePrice > 0).all()
 ```
 - `assert` 嘅意思係「如果唔係咁，即刻停低報錯」。
-- 呢兩句喺交之前檢查三樣嘢：行數啱、Id 次序同範本一樣、冇 NaN、冇無限大、冇負數。
+- 呢兩句喺交之前檢查以下幾樣嘢：行數啱（1459）、Id 次序同範本一樣、冇 NaN、冇無限大、冇負數或者 0。
 - 寧願喺 notebook 爆，都好過浪費一次 Kaggle submission。
+
+```python
+    (OUT_DIR / "submissions").mkdir(parents=True, exist_ok=True)
+    submission.to_csv(OUT_DIR / "submissions" / f"{name}.csv", index=False)
+    print("saved", name + ".csv")
+```
+- 開 `submissions` folder（已經有就唔理）。
+- 存成 CSV，檔名係 `name` 加 `.csv`。`index=False` 好重要：冇咗佢，CSV 會多咗一欄行號，Kaggle 就會唔收。
 
 ### Cell 2：Step 0
 
@@ -245,6 +289,7 @@ X_test = test.drop(columns="Id")
 score, _, _ = cv_evaluate(DummyRegressor(strategy="mean"), X, y, X_test, target="raw")
 ```
 - `DummyRegressor` 會完全無視 X，淨係估訓練數據嘅平均價。
+- **點解用 `target="raw"`？** 「估平均價」就係原價嘅平均（例如 18 萬），同 Step 1 一樣喺原價尺度訓練，兩個先可以公平比較。
 - `_` 係 Python 嘅慣例，代表「呢個回傳值我唔要」。
 
 ### Cell 3：Step 1
@@ -267,7 +312,7 @@ save_submission("s1_ridge_raw", test_step1)
 
 | Step | CV RMSE | 大約誤差 |
 |---|---|---|
-| 0 估平均價 | **0.408** | 典型誤差大約 50% |
+| 0 估平均價 | **0.408** | 典型誤差大約 50%（notebook 寫「about 50%」） |
 | 1 Ridge 原價 | **0.155** | 典型誤差大約 17% |
 
 - 點樣由 RMSE 換算做百分比：`e^0.155 − 1 ≈ 0.17`。呢個只係粗略直覺，用嚟講解就夠。
@@ -294,7 +339,10 @@ A：5 個 fold 有 5 個稍為唔同嘅 model。平均佢哋嘅預測可以抵�
 A：StandardScaler 要計平均同標準差，有缺失值計唔到。而且 pipeline 係按次序執行嘅。
 
 **Q：`handle_unknown="ignore"` 有咩用？**
-A：test 可能出現 training 從未見過嘅類別。冇呢個設定，OneHotEncoder 會報錯；有咗佢，嗰個類別就會變成全部 0，等同「唔屬於任何已知類別」。
+A：預測時可能遇到訓練時從未見過嘅類別：喺 CV 入面，罕見類別可能只喺驗證 fold 出現；而 MSSubClass 代號 150 只喺 test 出現。冇呢個設定，OneHotEncoder 會報錯；有咗佢，嗰個類別就會變成全部 0，等同「唔屬於任何已知類別」。
+
+**Q：點解要用 `clone`？**
+A：確保每個 fold 用一個全新、獨立嘅 model。我哋用嘅 model 每次 fit 本身都會重新開始，所以 `clone` 主要係保險；但遇到會「接住上次繼續學」嘅 model（例如 warm_start），冇 `clone` 就會出錯。
 
 ---
 

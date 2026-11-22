@@ -5,6 +5,10 @@
 
 > **前置知識（唔識就先睇 Part 0）：** 變數同 function → §1.1、§1.3；`import` 同 f-string → §1.7；DataFrame 同 Series → §3.1；`.loc` 同 boolean mask → §2.3、§3.2；log 同 skew → §5。
 
+> **Step 係咩？** 成本 notebook 將每個實驗編號做 Step 0 至 12，由 Part 2 開始逐步做。Part 1 提到「Step 2」、「Step 6」，只係預告 EDA 嘅發現之後會喺邊一步用到。
+>
+> **Notebook 標題 vs 筆記編號：** notebook 入面嘅英文小標題（例如「1.4 Outliers」）同呢份筆記嘅章節（例如 §1.5）係兩套編號。筆記講 notebook 嘅格時，會寫「Cell 1」、「Cell 2」……
+
 ---
 
 ## 1. 概念
@@ -31,7 +35,7 @@ score = √( 平均( (log(估計價錢) − log(真實價錢))² ) )
 ### 1.3 Skewness（偏度）
 
 - 數據有一條長尾巴拖向右邊（少數極貴嘅屋），就叫 **right-skewed**。
-- skew = 0 代表左右對稱；> 1 就算好偏。
+- skew = 0 代表左右對稱；> 0.75 我哋當係「明顯偏」（Part 3 揀欄取 log 就用呢個門檻）；> 1 就係好偏。
 - 我哋嘅 SalePrice skew = **1.88**，取 log 之後得 **0.12**，差唔多完全對稱。
 
 **點解偏斜會影響線性 model？** 線性回歸要減嘅係誤差嘅平方。尾巴嗰幾間貴屋誤差特別大，一平方就更加大，結果成條線都被佢哋拉走。
@@ -51,7 +55,7 @@ score = √( 平均( (log(估計價錢) − log(真實價錢))² ) )
 
 **重要：** 我哋只係喺 **training** 嗰陣拎走佢哋，計 CV 分數嗰陣佢哋照計。如果連評分都拎走，就變咗呃自己，因為 test 入面可能都有類似嘅屋。呢點 Part 3 會再講。
 
-### 1.6 Correlation（相關系數）
+### 1.6 Correlation（相關係數）
 
 - 數值由 -1 到 1，量度兩個數字**有幾似一條直線咁一齊郁**。
 - 局限一：只睇得到直線關係。
@@ -83,22 +87,34 @@ import matplotlib.pyplot as plt
 
 ```python
 CANDIDATES = [Path("/kaggle/input/house-prices-advanced-regression-techniques"),
+              *sorted(path.parent for path in Path("/kaggle/input").glob("**/train.csv")),
               Path("../house-prices-advanced-regression-techniques"),
               Path("house-prices-advanced-regression-techniques")]
-DATA_DIR = next(path for path in CANDIDATES if (path / "train.csv").exists())
 ```
-- `CANDIDATES` 係一個 list（→ Part 0 §1.2），入面放咗 3 個可能嘅位置。
-- 喺 Kaggle 上面，data 固定放喺 `/kaggle/input/...`；喺我嗰邊（本地）就係另一個位置。
-- 呢兩行會逐個位置去搵，邊度搵到 `train.csv` 就用邊個。
-- `path for path in CANDIDATES if (path / "train.csv").exists()`：逐個 `path` 去試（好似一個縮短咗嘅 `for` 迴圈，→ Part 0 §1.4），只保留 `train.csv` 存在嘅位置。
-- `next(...)` 嘅意思係「攞第一個符合條件嘅」。
-- **冇咗會點：** 同一本 notebook 唔可以喺 Kaggle 同本地都跑得到。
+- `CANDIDATES` 係一個 list（→ Part 0 §1.2），入面放咗幾個可能搵到 data 嘅位置。
+- 第 1 個：Kaggle 比賽 data 嘅標準位置。
+- 第 2 行：**後備**。`glob("**/train.csv")` 會喺 `/kaggle/input` 入面所有 folder（包括 folder 入面嘅 folder）搵叫 `train.csv` 嘅檔案，`.parent` 攞佢所在嘅 folder。萬一 Kaggle 將 data 放咗喺另一個名嘅 folder，都搵得到。前面個 `*` 嘅意思係「將搵到嘅每一個都逐個放入呢個 list」。喺你自己部電腦冇 `/kaggle/input`，呢行就乜都唔加。
+- 最後兩個：喺你自己部電腦（本地）嘅位置。
 
 ```python
-OUT_DIR = Path("/kaggle/working") if Path("/kaggle/working").exists() else Path("results")
+DATA_DIR = next((path for path in CANDIDATES if (path / "train.csv").exists()), None)
+if DATA_DIR is None:
+    raise FileNotFoundError("Could not find train.csv. Looked in: " + ...)
+```
+- `(path for path in CANDIDATES if (path / "train.csv").exists())`：逐個位置去試，只保留真係有 `train.csv` 嘅，即係 generator expression（→ Part 0 §1.8）。
+- `next(…, None)`：攞第一個搵到嘅；一個都搵唔到就俾 `None`。
+- `raise FileNotFoundError(...)`：搵唔到就即刻停低，並且印出一句清楚嘅錯誤訊息，講明搵過邊幾個位置、喺 Kaggle 要撳「Add Input」掛 data。咁你就唔會見到一個睇唔明嘅錯誤。
+- **冇咗呢幾行會點：** 同一本 notebook 唔可以喺 Kaggle 同你部電腦都跑得到。
+
+```python
+ON_KAGGLE = Path("/kaggle/working").exists()
+OUT_DIR = Path("/kaggle/working") if ON_KAGGLE else DATA_DIR.parent / "v2" / "results"
 (OUT_DIR / "figures").mkdir(parents=True, exist_ok=True)
 ```
+- `ON_KAGGLE`：有 `/kaggle/working` 呢個 folder，就代表喺 Kaggle 度跑緊。
 - Kaggle 只准寫檔案入 `/kaggle/working`，所以 output 要放嗰度。
+- 本地就放入 repo 嘅 `v2/results`。用 `DATA_DIR.parent`（data folder 嘅上一層，即係 repo）嚟定位，咁無論你喺邊個 folder 開 notebook，output 都會去同一個地方。
+- 一行 if（`A if 條件 else B`）→ Part 0 §1.8。
 - `mkdir` 開 folder。`parents=True` 代表連上層 folder 一齊開；`exist_ok=True` 代表已經有就唔好報錯。
 
 （`def` 定義 function，`return` 交返結果 → Part 0 §1.3。寫成 function 係因為要讀 3 個檔案，設定要完全一樣。）
@@ -178,20 +194,40 @@ missing = pd.DataFrame({"train": train.drop(columns="SalePrice").isna().sum(),
 - `.sum()` 將每欄嘅 True 數埋，即係每欄缺幾多格。
 - train 同 test 分開兩欄數，方便比較。
 
+**先搞清楚 `missing` 係一張咩表：** `train.isna().sum()` 嘅結果係一條 Series，佢嘅**行名（index）係 train 嘅欄名**，值係嗰欄缺幾多格（→ Part 0 §3.1）。所以 `missing` 每一行代表 train 嘅**一個欄**，例如：
+
+```
+              train  test
+PoolQC         1453  1456
+LotFrontage     259   227
+Street            0     0
+```
+
+`missing.index` 就係呢啲欄名（"PoolQC"、"LotFrontage"……）。
+
 ```python
 missing = missing[(missing.train + missing.test) > 0]
 ```
-只留低有缺失嘅欄。
+只留低有缺失嘅欄（train 加 test 嘅缺失數大過 0）。
 
 ```python
 missing["kind"] = np.where(missing.index.isin(ABSENT_MEANING), "NA = absent", "truly unknown")
 ```
-`np.where(條件, A, B)`：條件成立就填 A，唔成立就填 B。用嚟幫每欄標記係邊種缺失。
+- `missing.index.isin(ABSENT_MEANING)`：每個欄名係咪喺「NA = 冇」嗰張清單入面，得出一串 True/False。
+- `np.where(條件, A, B)`：條件成立就填 A，唔成立就填 B。用嚟幫每欄標記係邊種缺失。
+
+```python
+missing = missing.sort_values("train", ascending=False)
+```
+按 train 缺失數**由多到少**排好（→ Part 0 §3.3）。之後 `head(20)` 先會係「缺最多嗰 20 欄」。
 
 ```python
 print("Columns missing only in test:", missing.index[missing.train.eq(0)].tolist())
 ```
-- 搵出 train 冇缺、但 test 有缺嘅欄。結果有 15 欄，例如 `MSZoning`、`GarageCars`。
+- `missing.train.eq(0)`：train 缺失數係咪等於 0（`.eq(0)` 即係 `== 0`）。
+- `missing.index[...]`：用呢串 True/False 揀出對應嘅欄名。
+- `.tolist()`：變成普通 list，印出嚟易睇啲。
+- 結果：train 冇缺、但 test 有缺嘅欄有 15 個，例如 `MSZoning`、`GarageCars`。
 - **點解重要：** model 喺 training 時從未見過呢啲欄有缺失。如果唔處理，到 test 先會爆。Part 2 嘅 Pipeline 會負責填佢哋。
 
 ```python
@@ -199,8 +235,9 @@ top = missing.head(20).iloc[::-1]
 colors = np.where(top.kind.eq("NA = absent"), "orange", "gray")
 ax.barh(top.index, top.train, color=colors)
 ```
-- 揀缺失最多嘅 20 欄。`iloc[::-1]` 將次序倒轉，咁最多嗰欄就會喺橫向棒形圖嘅最上面。
+- 揀缺失最多嘅 20 欄。`iloc[::-1]` 將次序倒轉（slicing → Part 0 §1.2），咁最多嗰欄就會喺橫向棒形圖嘅最上面，因為 `barh` 係由下而上畫。
 - 橙色代表「NA = 冇」，灰色代表「唔知」。
+- 呢度用 `fig, ax = plt.subplots(...)`（得一格圖，所以叫 `ax`），Cell 3 就用 `axes`（兩格）。Figure 同 Axes 嘅分別 → Part 0 §6。
 
 ### Cell 5：Outlier
 
@@ -216,17 +253,18 @@ ax.scatter(train.GrLivArea, train.SalePrice, s=8, alpha=0.5)
 ax.scatter(train.GrLivArea[outlier], train.SalePrice[outlier], s=150,
            facecolors="none", edgecolors="red", linewidths=2, label="outliers")
 ```
-- 第一行畫全部點。`alpha=0.5` 係半透明，點重疊嘅地方會深色啲。
-- 第二行喺 outlier 上面再畫一個空心紅圈。
+- 第一行畫全部點。`alpha=0.5` 係半透明，點重疊嘅地方會深色啲。（呢個 `alpha` 係畫圖嘅透明度，同 Ridge 嘅 alpha 冇關係。）
+- 第二行喺 outlier 上面再畫一個空心紅圈。`train.GrLivArea[outlier]` 用 boolean mask 只揀 outlier 嗰兩間（→ Part 0 §2.3）。
+- `label="outliers"` 加 `ax.legend()`：喺圖嘅角落顯示「紅圈 = outliers」嘅圖例。`ax.set(title=..., xlabel=..., ylabel=...)` 設標題同軸名（→ Part 0 §6）。
 
 ```python
 train.loc[outlier, ["Id", "GrLivArea", "SalePrice", "OverallQual", "SaleCondition"]]
 ```
 - 用 `.loc[邊啲行, 邊啲欄]` 攞出嗰兩間屋嘅資料（→ Part 0 §3.2）。
-- **注意：** 呢個 `outlier` 變數之後 Part 2 嘅 `cv_evaluate` 會再用（Step 6 拎走 outlier 嗰陣）。
+- **注意：** 呢個 `outlier` 變數之後 Part 2 嘅 `cv_evaluate` 會再用（Step 6 拎走 outlier 嗰陣）。佢係用**原始數據**計嘅，所以之後就算面積取咗 log，佢都唔會變。
 - 會見到 `SaleCondition = Partial`，呢個就係拎走佢哋嘅**理由**，唔係淨係因為佢哋「睇落怪」。
 
-### Cell 6：相關系數
+### Cell 6：相關係數
 
 ```python
 correlations = (train.select_dtypes("number").drop(columns="Id")
@@ -237,9 +275,24 @@ correlations = (train.select_dtypes("number").drop(columns="Id")
 1. 只揀數字欄；
 2. 拎走 Id，因為 Id 只係編號，冇意思；
 3. `.corr()` 計出所有欄兩兩之間嘅相關；
-4. 只攞同 SalePrice 嗰一行；
+4. `["SalePrice"]`：只攞 SalePrice 嗰一**欄**，即係「每個欄同 SalePrice 嘅相關」；
 5. 拎走 SalePrice 自己（自己同自己一定係 1）；
 6. 由細到大排好。
+
+```python
+top10 = correlations.tail(10)
+```
+因為已經由細到大排好，最後 10 個（`.tail(10)`）就係相關最高嘅 10 個。
+
+```python
+ax.barh(top10.index, top10.values, color="steelblue")
+```
+畫橫棒圖：y 軸係欄名（`top10.index`），棒嘅長度係相關係數（`top10.values`）。
+
+```python
+top10.iloc[::-1].round(3)
+```
+倒轉次序（最高嘅排第一），取 3 個小數位，顯示成表。
 
 ---
 

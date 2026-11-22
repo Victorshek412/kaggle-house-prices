@@ -106,3 +106,38 @@ def test_blend():
         assert (RESULTS / "figures" / name).is_file(), name
     header = (RESULTS / "kaggle_log.csv").read_text().splitlines()[0]
     assert header == "submission,step,cv_rmse,kaggle_score,submitted_on,notes"
+
+
+def _parts_1_2(monkeypatch, tmp_path):
+    ns = run_part("part1_eda.py", monkeypatch)
+    ns["OUT_DIR"] = tmp_path
+    exec((V2 / "src" / "part2_baseline.py").read_text().split("# %% [markdown]\n# ### Step 0")[0], ns)
+    return ns
+
+
+def test_record_rerun_replaces_row(monkeypatch, tmp_path):
+    ns = _parts_1_2(monkeypatch, tmp_path)
+    ns["record"]("1", "first", 0.2)
+    ns["record"]("2", "second", 0.15)
+    ns["record"]("1", "first again", 0.19)  # re-running a cell must not add a duplicate
+    results = ns["results"]
+    assert results.step.tolist() == ["1", "2"]
+    assert results.cv_rmse.tolist() == [0.19, 0.15]
+
+
+def test_missing_data_gives_clear_error(monkeypatch, tmp_path):
+    import pytest
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(FileNotFoundError, match="train.csv"):
+        runpy.run_path(str(V2 / "src" / "part1_eda.py"))
+
+
+def test_notebook_matches_source():
+    import nbformat
+    import sys
+    sys.path.insert(0, str(V2))
+    from build import parse_cells
+    expected = [body for part in sorted((V2 / "src").glob("part*.py"))
+                for _, body in parse_cells(part.read_text(encoding="utf-8"))]
+    notebook = nbformat.read(V2 / "house_prices_v2.ipynb", as_version=4)
+    assert [cell.source for cell in notebook.cells] == expected, "run: python v2/build.py --execute"

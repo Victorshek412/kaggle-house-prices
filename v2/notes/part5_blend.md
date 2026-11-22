@@ -19,7 +19,9 @@ Part 4 揀到最好嘅單一 model 係 XGBoost（0.1231）。Part 5 問嘅問題
 |---|---|
 | 最好嘅單一 model（XGBoost） | 0.1231 |
 | **最終 blend（Lasso + XGBoost + CatBoost + SVR）** | **0.1191** |
-| 進步 | −0.0044（3.3%） |
+| 進步（同 XGBoost 比） | −0.0040（3.3%） |
+
+**小心：** notebook 印出嚟嘅係「Step 12 … (−0.00442 vs previous step)」，因為 `record` 係同成績表上一行（SVR）比較，唔係同最好嘅 model 比（Part 4 §0.3 講過呢個陷阱）。報告要用 −0.0040。
 
 ---
 
@@ -35,7 +37,7 @@ Part 4 揀到最好嘅單一 model 係 XGBoost（0.1231）。Part 5 問嘅問題
 | Model B | 11.94 | −0.06（估低咗） |
 | A、B 平均 | 12.02 | **+0.02** |
 
-A 估高、B 估低，平均之後兩邊互相抵銷，所以比兩個都準。
+A 估高、B 估低，平均之後兩邊互相抵消，所以比兩個都準。
 
 但如果 A、B **錯嘅方向一樣**，例如都估高 0.10，平均之後仍然係錯 0.10，冇任何改善。
 
@@ -128,7 +130,7 @@ fig.colorbar(image, label="correlation of OOF residuals")
 | Ridge / Lasso / ElasticNet | 0.99–1.00 | 幾乎一模一樣，互相 blend 冇用 |
 | 線性 vs boosting | 0.88 | 好 model 之間最唔似嘅一對，blend 最有用 |
 | XGBoost vs CatBoost | 0.93 | 同屬 boosting，但處理類別方法唔同，所以都有少少分別 |
-| SVR vs 其他 | 0.89–0.92 | 介乎中間 |
+| SVR vs 其他（RF 除外） | 0.89–0.92 | 介乎中間 |
 | Random Forest vs 線性 | 0.77 | 錯得最唔同，但本身太差（§3 解釋點解都唔要） |
 
 ### Cell 3：做 blend
@@ -169,12 +171,13 @@ def blend_rmse(chosen):
 
 ```python
 pd.Series({
-    "best single model (XGBoost)": comparison.cv_rmse.min(),
+    f"best single model ({comparison.index[0]})": comparison.cv_rmse.min(),
     "XGBoost + CatBoost": blend_rmse(["xgb", "catboost"]),
     ...
 }).round(5).to_frame("cv_rmse")
 ```
 - 用 dict 整一個 Series，再用 `.to_frame` 轉做表格，咁顯示會靚啲。
+- 第一行嘅名用 f-string 自動填上最好嘅 model 名（`comparison.index[0]`，即係比較表排第一嗰個），所以喺 Kaggle 跑如果排名有變，個名都會啱。
 - **重要：** 呢啲數字係**揀完先睇**嘅，用嚟理解，唔係用嚟揀。
 
 | Blend | CV RMSE | 解讀 |
@@ -291,20 +294,20 @@ summary.to_csv(OUT_DIR / "submission_summary.csv", index=False)
 **報告「best improvement」嗰題點揀：**
 - 睇 Kaggle 分數，搵相鄰兩次 submission 之間進步最大嘅一次。
 - 按 CV 預計係 **S2 → S3**：只改咗一樣嘢（log 面積），進步 12.4%，最容易清楚解釋。
-- 如果 Kaggle 結果唔同，例如 S5 → S6 進步更大，就用 Kaggle 嘅結果，並且討論點解 CV 同 leaderboard 唔完全一致。CV 有選擇偏差，leaderboard 只用部份 test 數據，兩者都有誤差。
+- 如果 Kaggle 結果唔同，例如 S5 → S6 進步更大，就用 Kaggle 嘅結果，並且討論點解 CV 同 leaderboard 唔完全一致。CV 有選擇偏差（所有決定都係用佢揀嘅），leaderboard 就係另一批數據，有自己嘅隨機誤差。
 
 ---
 
 ## 5. 講師可能會問
 
 **Q：咩係 blending？點解有用？**
-A：將幾個 model 嘅預測平均。只要佢哋嘅錯誤唔完全相關，有啲估高、有啲估低，平均就可以互相抵銷，所以比最好嘅單一 model 更準。我哋用 OOF residual 嘅 correlation 去量度呢種互補程度。
+A：將幾個 model 嘅預測平均。只要佢哋嘅錯誤唔完全相關，有啲估高、有啲估低，平均就可以互相抵消，所以比最好嘅單一 model 更準。我哋用 OOF residual 嘅 correlation 去量度呢種互補程度。
 
 **Q：點解用等權重，唔用優化過嘅權重？**
 A：權重只能夠喺同一批 OOF 預測上面揀，再用同一批數據報分數，就會 overfit 嗰 1460 間屋嘅雜訊，分數虛高。等權重唔使睇分數都可以決定，冇呢個偏差。
 
 **Q：點揀 blend 入面有邊幾個 model？**
-A：喺睇 blend 分數之前先定規則：每個家族揀最好嗰個，兩個 boosting 因為處理類別方法唔同所以都要。結果係 Lasso、XGBoost、CatBoost、SVR。
+A：喺睇 blend 分數之前先定規則：每個家族揀最好嗰個，兩個 boosting 因為處理類別方法唔同所以都要。結果係 Lasso、XGBoost、CatBoost、SVR。坦白講，規則係睇過每個單一 model 嘅分數先定（例如知道 RF 弱），但冇睇過任何 blend 嘅分數。
 
 **Q：點解加多啲 model 反而會差？**
 A：Ridge、Lasso、ElasticNet 錯得幾乎一樣（correlation 0.99），三個一齊放入去，等於線性 model 有三票，平均會偏向佢哋嘅錯誤。多樣性比數量重要。

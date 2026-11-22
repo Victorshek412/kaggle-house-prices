@@ -25,12 +25,16 @@ oof, test_preds, seconds = {}, {}, {}
 
 
 def run_model(step, name, description, model, X_train, X_predict):
-    """Score one model with the shared CV, keep its predictions, and record it."""
+    """Score one model with the shared CV, keep its predictions, and record it
+    (step=None: keep the predictions but don't add a row to the results table)."""
     started = time.time()
     score, oof[name], test_preds[name] = cv_evaluate(model, X_train, y, X_predict,
                                                       target="log", drop_outliers=True)
     seconds[name] = time.time() - started
-    record(step, description, score)
+    if step is None:
+        print(f"{name}: CV RMSE {score:.5f}", end="")
+    else:
+        record(step, description, score)
     print(f"   ({seconds[name]:.0f} s)")
 
 
@@ -38,9 +42,8 @@ def linear_pipeline(model):
     return Pipeline([("prep", make_linear_preprocessor()), ("model", model)])
 
 
-run_model("6b", "ridge", "Ridge (reference, re-run)", linear_pipeline(Ridge(alpha=best_alpha)),
-          X_final, X_test_final)
-results = results.iloc[:-1]  # the re-run duplicates step 6b; keep the table tidy
+# Ridge was already scored as step 6b; re-run it only to keep its predictions for Part 5.
+run_model(None, "ridge", "Ridge", linear_pipeline(Ridge(alpha=best_alpha)), X_final, X_test_final)
 
 # %% [markdown]
 # ### Step 7: Lasso and ElasticNet, two other penalties
@@ -54,20 +57,29 @@ results = results.iloc[:-1]  # the re-run duplicates step 6b; keep the table tid
 # differently in sklearn. We try a small grid for each and keep the best.
 
 # %%
-for alpha in [0.0002, 0.0005, 0.001]:
-    score, _, _ = cv_evaluate(linear_pipeline(Lasso(alpha=alpha, max_iter=50000)),
-                              X_final, y, X_test_final, drop_outliers=True)
-    print(f"Lasso alpha={alpha}: {score:.5f}")
+def tune_alpha(make_model, alphas, label):
+    """Score make_model(alpha) for each alpha with the shared CV; return the best alpha."""
+    scores = {}
+    for alpha in alphas:
+        scores[alpha], _, _ = cv_evaluate(linear_pipeline(make_model(alpha)),
+                                          X_final, y, X_test_final, drop_outliers=True)
+        print(f"{label} alpha={alpha}: {scores[alpha]:.5f}")
+    return min(scores, key=scores.get)
+
+
+lasso_alpha = tune_alpha(lambda a: Lasso(alpha=a, max_iter=50000), [0.0002, 0.0005, 0.001], "Lasso")
+enet_alpha = tune_alpha(lambda a: ElasticNet(alpha=a, l1_ratio=0.5, max_iter=50000),
+                        [0.0005, 0.001, 0.002], "ElasticNet")
 
 # %%
-run_model("7", "lasso", "Lasso (alpha=0.0005)",
-          linear_pipeline(Lasso(alpha=0.0005, max_iter=50000)), X_final, X_test_final)
-run_model("7b", "elasticnet", "ElasticNet (alpha=0.001, l1_ratio=0.5)",
-          linear_pipeline(ElasticNet(alpha=0.001, l1_ratio=0.5, max_iter=50000)),
+run_model("7", "lasso", f"Lasso (alpha={lasso_alpha})",
+          linear_pipeline(Lasso(alpha=lasso_alpha, max_iter=50000)), X_final, X_test_final)
+run_model("7b", "elasticnet", f"ElasticNet (alpha={enet_alpha}, l1_ratio=0.5)",
+          linear_pipeline(ElasticNet(alpha=enet_alpha, l1_ratio=0.5, max_iter=50000)),
           X_final, X_test_final)
 
 # %%
-lasso_fit = linear_pipeline(Lasso(alpha=0.0005, max_iter=50000)).fit(X_final[~outlier], np.log(y[~outlier]))
+lasso_fit = linear_pipeline(Lasso(alpha=lasso_alpha, max_iter=50000)).fit(X_final[~outlier], np.log(y[~outlier]))
 coefficients = lasso_fit.named_steps["model"].coef_
 print(f"Lasso kept {np.sum(coefficients != 0)} of {len(coefficients)} columns (the rest are exactly 0)")
 
@@ -137,9 +149,10 @@ save_submission("s5_catboost", test_preds["catboost"])
 # Pipeline) is essential. Errors smaller than `epsilon` are ignored. `C` sets how hard the
 # model tries to fit the rest, and `gamma` sets how local "similar" is.
 #
-# The grid was widened twice, because the best pair kept landing on its edge. The final best,
-# C=1 and gamma=0.003, sits on a corner of this grid. A separate check beyond that corner
-# (C=0.3; gamma=0.005 and 0.01) scored worse (0.124–0.130), so it is a true minimum.
+# The grid was widened twice, because the best pair kept landing on its edge. In the reference
+# run the best pair (C=1, gamma=0.003) still sits on a corner, so the next cell also checks a few
+# pairs just beyond that corner. If they all score worse, the corner is the best point in its
+# neighbourhood. That is a local minimum, not a proof that nothing better exists anywhere.
 
 # %%
 svr_scores = {}
@@ -150,6 +163,14 @@ for C in [1, 3, 10, 30]:
             X_final, y, X_test_final, drop_outliers=True)
         print(f"SVR C={C}, gamma={gamma}: {svr_scores[(C, gamma)]:.5f}")
 best_C, best_gamma = min(svr_scores, key=svr_scores.get)
+
+# %%
+# Check a few pairs just outside the grid's corner (not used for choosing, only for checking).
+for C, gamma in [(0.3, 0.003), (1, 0.005), (1, 0.01), (0.3, 0.01)]:
+    score, _, _ = cv_evaluate(linear_pipeline(SVR(C=C, epsilon=0.01, gamma=gamma)),
+                              X_final, y, X_test_final, drop_outliers=True)
+    print(f"beyond the grid: SVR C={C}, gamma={gamma}: {score:.5f}")
+print(f"best on the grid: C={best_C}, gamma={best_gamma}: {svr_scores[(best_C, best_gamma)]:.5f}")
 
 run_model("11", "svr", f"SVR (C={best_C}, gamma={best_gamma})",
           linear_pipeline(SVR(C=best_C, epsilon=0.01, gamma=best_gamma)), X_final, X_test_final)

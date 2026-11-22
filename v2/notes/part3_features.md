@@ -54,6 +54,8 @@ model 唔識睇 `data_description.txt`，唔知 NA 代表「冇車房」，亦�
 
 相反，`TotalSF = GrLivArea + TotalBsmtSF` 只用到自己嗰間屋嘅兩個數，其他屋點樣都影響唔到。
 
+**一個刻意嘅例外：** Step 5 揀「邊啲欄要取 log」時，係睇全部 train 嘅 skew 去決定。呢個違反咗上面嘅規則，但影響極細，原因喺 §5.2 解釋。notebook 開頭亦都講明咗呢點，講師問嘅話可以坦白答。
+
 ---
 
 ## 2. Step 2：預測 log(SalePrice)
@@ -155,6 +157,8 @@ def fill_missing_meaning(df):
 ```
 一條 True/False Series：邊啲屋嘅面積（或數目）係 0。
 
+**如果面積本身係缺失（NaN）會點？** test 有 1 間屋嘅 GarageArea 同 1 間屋嘅 TotalBsmtSF 係 NaN。`NaN == 0` 係 False（→ Part 0 §3.1），所以呢啲屋唔會被當成「冇車房 / 冇地庫」，個欄會保持缺失，之後交俾 Pipeline 當「Missing」處理。呢個正正係我哋想要嘅：唔知就係唔知，唔好亂估。
+
 ```python
         for column in columns:
             df.loc[absent & df[column].isna(), column] = label
@@ -242,7 +246,10 @@ def add_new_features(df):
     df["RemodelAge"] = (df["YrSold"] - df["YearRemodAdd"]).clip(lower=0)
 ```
 - `.clip(lower=0)` 將負數變 0（→ Part 0 §3.3）。
-- **點解會有負數？** train 入面有 1 間屋嘅裝修年份遲過賣出年份，可能係賣咗先完成裝修，或者係數據錯。樓齡係負數冇意義，所以當 0。
+- **點解會有負數？**
+  - train 有 1 間、test 有 2 間屋嘅裝修年份遲過賣出年份，可能係賣咗先完成裝修，或者係數據錯。
+  - test 仲有 1 間屋嘅建成年份遲過賣出年份，即係買樓花。
+  - 樓齡係負數冇意義，所以當 0。兩條公式都要 clip，因為兩種情況都有。
 
 ```python
     porches = ["WoodDeckSF", "OpenPorchSF", "EnclosedPorch", "3SsnPorch", "ScreenPorch"]
@@ -261,7 +268,7 @@ save_submission("s2_new_features", test_log)
 - 喺 Step 3 嘅結果上面再加特徵，所以係**累積**嘅。
 - 今次要 `test_log`，因為要出 submission **S2**。
 
-### 4.3 點睇結果：0.15106 → 0.15121（+0.0001，即係冇分別）
+### 4.3 點睇結果：0.15106 → 0.15121（+0.00014，即係冇分別）
 
 **呢個唔係失敗，而係一個好嘅發現。** 原因係 Ridge 係線性 model（→ Part 0 §4.3）：
 
@@ -287,7 +294,7 @@ save_submission("s2_new_features", test_log)
 
 **點解偏斜嘅特徵會令線性 model 估差？** 有兩個原因：
 
-1. **關係唔係直線。** Step 2.3 講過，log 價錢同 log 面積先係直線關係。log 價錢對原面積係一條彎線，Ridge 只識畫直線，所以必然有誤差。
+1. **關係唔係直線。** 上面 §2.3 講過，log 價錢同 log 面積先係直線關係。log 價錢對原面積係一條彎線，Ridge 只識畫直線，所以必然有誤差。
 2. **極端值主導。** LotArea 有啲屋係 200,000 平方呎，大部份只係 10,000 左右。極大嘅值會將條線拉歪，好似 Part 1 樓價嘅情況。
 
 **解決：** 對面積取 log1p，兩邊都喺 log 尺度，關係就拉直咗。
@@ -312,7 +319,7 @@ save_submission("s2_new_features", test_log)
 ```python
 AREA_COLUMNS = ["LotFrontage", "LotArea", ..., "TotalSF", "TotalPorchSF"]
 ```
-- 人手列出所有「面積 / 金額」類嘅欄，包括 Step 4 新整嘅 TotalSF 同 TotalPorchSF。
+- 人手列出所有「面積、長度同金額」類嘅欄（LotFrontage 係長度，MiscVal 係金額），包括 Step 4 新整嘅 TotalSF 同 TotalPorchSF。
 - **點解唔對所有數字欄做？** 例如 OverallQual（1–10 分）、YearBuilt（年份）、HouseAge 呢類，唔係「按比例」嘅量。年份取 log 冇意義。
 
 ```python
@@ -450,6 +457,11 @@ best_alpha = min(alpha_scores, key=alpha_scores.get)
 ```
 - 喺 dict 入面搵「分數最細」嗰個 key。
 - `min(..., key=...)` 嘅意思係用 `alpha_scores.get(alpha)`（即係分數）嚟比較大細，但回傳嘅係 key（alpha）本身。
+- **用例子行一次：**
+  - `alpha_scores = {1: 0.1303, 3: 0.1284, 10: 0.1277, 30: 0.1280, 100: 0.1298}`
+  - `min` 逐個 key 問 `alpha_scores.get(key)` 攞分數：1 → 0.1303，3 → 0.1284，10 → 0.1277……
+  - 0.1277 最細，所以回傳佢嘅 key，即係 **10**。
+- 留意 `.get` 後面**冇括號**：我哋係將「查分數呢個動作」交俾 `min` 自己逐個用，而唔係即刻查一次。
 
 ```python
 ridge = Pipeline([("prep", make_linear_preprocessor()), ("model", Ridge(alpha=best_alpha))])
@@ -472,7 +484,7 @@ X_final, X_test_final = X5, X5_test
 |---|---|---|---|---|---|
 | CV RMSE | 0.13027 | 0.12843 | **0.12766** | 0.12797 | 0.12980 |
 
-- 呈 U 形：兩邊差，中間好。左邊（alpha 細）係 overfit，右邊（alpha 大）係 underfit。**呢個 U 形本身就係 bias-variance trade-off 嘅示範**，可以畫入報告。
+- 呈 U 形：兩邊差，中間好。左邊（alpha 細）係 overfit，右邊（alpha 大）係 underfit。**呢個 U 形本身就係 bias-variance trade-off 嘅示範**（bias 同 variance 係咩 → Part 0 §4.4），可以畫入報告。
 - 結果確認咗原本估嘅 10 已經係最好，所以 6b 同 6 分數一樣。
 
 **誠實嘅限制：** 用同一個 CV 去揀 alpha 再報分數，分數會有少少樂觀，因為我哋揀咗「喺呢 5 個 fold 表現最好」嘅值。不過只試咗 5 個值，影響好細。
@@ -488,6 +500,10 @@ part3
 ```
 - `.isin([...])` 會揀出 step 喺清單入面嘅行。
 - `.diff()` 計每行同上一行嘅差（→ Part 0 §3.3）；前面加負號，令「進步」變成正數，睇起嚟直觀啲。
+- **點睇呢張表：**
+  - `improvement` 係**絕對差**（例如 0.018823），唔係 §0.3 嗰個百分比。
+  - 第一行係 NaN，因為冇上一行可以比較。
+  - 6b 顯示 `-0.000000`，即係 0。
 - 呢張表可以直接放入報告。
 
 ---

@@ -8,6 +8,10 @@
 # at a time and never at column statistics, so it can't leak information between folds. That
 # means it is safe to apply to `train` and `test` before CV. Anything that *learns* from a
 # column (medians, scaling, category lists) stays inside the Pipeline from Part 2.
+#
+# One deliberate exception: in Step 5 we choose *which* columns to log-transform once, by
+# looking at their skewness in `train`. That choice uses the features only, never the price,
+# and it learns no numbers that go into the model, so its effect on CV is negligible.
 
 # %% [markdown]
 # ### Step 2: predict log(SalePrice) instead of the price

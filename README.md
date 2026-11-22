@@ -17,7 +17,7 @@ This is a beginner-readable notebook that builds the solution one measured step 
 
 ```sh
 python3 -m venv .venv
-.venv/bin/pip install -r v1_reference/requirements.txt pytest
+.venv/bin/pip install -r v2/requirements.txt
 .venv/bin/python v2/build.py --execute
 .venv/bin/pytest v2/tests
 ```

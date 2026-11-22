@@ -67,7 +67,7 @@ def blend_rmse(chosen):
     return np.sqrt(np.mean((y_log - np.mean([oof[n] for n in chosen], axis=0)) ** 2))
 
 pd.Series({
-    "best single model (XGBoost)": comparison.cv_rmse.min(),
+    f"best single model ({comparison.index[0]})": comparison.cv_rmse.min(),
     "XGBoost + CatBoost": blend_rmse(["xgb", "catboost"]),
     "Lasso + XGBoost": blend_rmse(["lasso", "xgb"]),
     "chosen 4-model blend": blend_score,

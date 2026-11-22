@@ -1,7 +1,7 @@
 # Part 4 學習筆記：比較 7 個 model
 
 > **前置知識（唔識就先睇 Part 0）：** dict → §1.2；function → §1.3；for 迴圈（包括兩層）→ §1.4；fit / predict → §4.2；coefficient → §4.3；overfitting / underfitting → §4.4；hyperparameter 同 tuning → §4.5；Pipeline → §4.6。
-> 另外會用到 Part 2 嘅 `cv_evaluate`、`record`、`make_linear_preprocessor`，同 Part 3 嘅 `X_final`、`X4`、`outlier`。
+> 另外會用到 Part 2 嘅 `cv_evaluate`、`record`、`make_linear_preprocessor`，同 Part 3 嘅 `X_final`、`X4`，同 Part 1（Cell 5）嘅 `outlier`。
 
 ---
 
@@ -24,8 +24,10 @@ Part 3 已經將**特徵定好**。Part 4 反過嚟做：**特徵唔郁，只換
 | 2 | **CatBoost** | 樹（boosting） | **0.1232** | 80 秒 |
 | 3 | SVR | Kernel | 0.1235 | 5 秒 |
 | 4 | Lasso | 線性 | 0.1255 | 2 秒 |
-| 5 | ElasticNet | 線性 | 0.1257 | 1 秒 |
-| 6 | Ridge | 線性 | 0.1277 | 0.4 秒 |
+| 5 | ElasticNet | 線性 | 0.1257 | 3 秒 |
+| 6 | Ridge | 線性 | 0.1277 | 0.5 秒 |
+
+（時間係我部電腦嘅參考數字，喺 Kaggle 會唔同。）
 | 7 | Random Forest | 樹（bagging） | 0.1382 | 12 秒 |
 
 **三個最重要嘅發現：**
@@ -80,10 +82,16 @@ def run_model(step, name, description, model, X_train, X_predict):
 
 ```python
     seconds[name] = time.time() - started
-    record(step, description, score)
+    if step is None:
+        print(f"{name}: CV RMSE {score:.5f}", end="")
+    else:
+        record(step, description, score)
     print(f"   ({seconds[name]:.0f} s)")
 ```
-記時間，記成績，印出用咗幾多秒。`:.0f` 代表唔要小數。
+- 記低用咗幾多秒。
+- 如果 `step` 係 `None`（Python 嘅「冇嘢」），就只印分數，**唔加入成績表**；否則用 `record` 正式記錄。下面 Ridge 嗰行會用到呢個選擇。
+- `end=""`：`print` 預設印完會轉行，`end=""` 就唔轉行，咁下一個 `print` 會接住喺同一行印。
+- `:.0f` 代表唔要小數。
 
 ```python
 def linear_pipeline(model):
@@ -93,12 +101,10 @@ def linear_pipeline(model):
 - 叫 linear 係因為用 `make_linear_preprocessor`（填缺失 + 標準化 + one-hot），但 Random Forest、XGBoost、SVR 都會借用佢。
 
 ```python
-run_model("6b", "ridge", "Ridge (reference, re-run)", linear_pipeline(Ridge(alpha=best_alpha)),
-          X_final, X_test_final)
-results = results.iloc[:-1]
+run_model(None, "ridge", "Ridge", linear_pipeline(Ridge(alpha=best_alpha)), X_final, X_test_final)
 ```
 - 重新跑一次 Part 3 最好嗰個 Ridge，目的係將佢嘅預測存入 `oof["ridge"]`，Part 5 要用。
-- 但呢個結果同 6b 一模一樣，唔想成績表有重複，所以 `results.iloc[:-1]` 拎走最後一行（`[:-1]` 即係「由頭到倒數第二個」）。
+- `step` 傳 `None`：Ridge 已經喺 Part 3 記錄咗（Step 6b），唔使再加一行。
 
 ---
 
@@ -118,40 +124,58 @@ ElasticNet:  兩樣都有，用 l1_ratio 決定比例
 
 | | Ridge（平方） | Lasso（絕對值） |
 |---|---|---|
-| 對細係數 | 0.1² = 0.01，罰得好輕 | \|0.1\| = 0.1，罰得相對重 |
+| 對細係數 0.1 | 罰 0.1² = 0.01，好輕 | 罰 0.1 嘅絕對值 = 0.1，相對重 |
 | 結果 | 所有係數縮細，但**唔會變成 0** | 冇用嘅係數會被壓到**啱啱好係 0** |
 | 等於 | 「每個特徵都用少少」 | 「自動揀特徵」（feature selection） |
 
 **直覺：** 用平方嚟罰，係數越接近 0，懲罰就跌得越快（0.01 → 0.0001），所以 Ridge 冇動力將係數壓到真正嘅 0。用絕對值，就算係數已經好細，懲罰都係同一個比例咁減。Lasso 會發現「完全唔用呢個特徵」最划算，所以直接將佢設做 0。
 
+**用數字講：** 將一個係數由 0.1 壓到 0，Lasso 可以慳返 0.1 嘅懲罰，Ridge 只可以慳返 0.01。所以對 Lasso 嚟講，將細係數壓到 0 好值得；對 Ridge 嚟講就唔值得，佢寧願保留少少。
+
 **ElasticNet：** 兩種 penalty 混合。`l1_ratio=0.5` 即係一半一半。當有幾個高度相關嘅特徵（例如 GarageCars 同 GarageArea），Lasso 通常會隨機揀一個、放棄其他；ElasticNet 傾向保留成組。
 
-**點解 alpha 咁細（0.0005，而 Ridge 係 10）？** sklearn 寫 Lasso 公式嘅方式唔同：佢將誤差部份除咗數據行數（1458），所以同一個 alpha 數值嘅意義完全唔同，**兩者唔可以直接比較**。
+**點解 alpha 咁細（0.0005，而 Ridge 係 10）？** sklearn 寫 Lasso 公式嘅方式唔同：佢將誤差部份除咗「2 × 訓練行數」（每個 fold 大約 2 × 1166），Ridge 就冇除。所以同一個 alpha 數值嘅意義完全唔同，**兩者唔可以直接比較**。
+
+（點解係 1166？1460 間屋分 5 份，每個 fold 用 4 份即係 1168 間訓練，再拎走嗰兩個 outlier。）
 
 ### 2.2 逐行解釋
 
 ```python
-for alpha in [0.0002, 0.0005, 0.001]:
-    score, _, _ = cv_evaluate(linear_pipeline(Lasso(alpha=alpha, max_iter=50000)),
-                              X_final, y, X_test_final, drop_outliers=True)
-    print(f"Lasso alpha={alpha}: {score:.5f}")
+def tune_alpha(make_model, alphas, label):
+    scores = {}
+    for alpha in alphas:
+        scores[alpha], _, _ = cv_evaluate(linear_pipeline(make_model(alpha)),
+                                          X_final, y, X_test_final, drop_outliers=True)
+        print(f"{label} alpha={alpha}: {scores[alpha]:.5f}")
+    return min(scores, key=scores.get)
 ```
-- 同 Part 3 調 Ridge alpha 一樣嘅方法：試 3 個值，印出分數。
-- `max_iter=50000`：Lasso 唔係一步計出答案，而係一步步逼近答案。alpha 細嘅時候要行好多步先收斂，預設嘅 1000 步會唔夠，仲會出警告。
+- 將 Part 3 調 Ridge alpha 嘅方法包成 function，因為 Lasso 同 ElasticNet 都要用。
+- `make_model`：一個「俾佢一個 alpha，佢就整一個 model」嘅 function。咁 `tune_alpha` 就唔使理係 Lasso 定 ElasticNet。
+- 每個 alpha：整 model → 用同一個 CV 評分 → 存入 `scores` → 印出。
+- 最後回傳分數最細嗰個 alpha（`min(..., key=...)` 嘅例子 → Part 3 §7.2）。
 - 呢度冇用 `record`：只係「試」，唔係正式 step。
-- 結果 0.0005 最好，而且喺中間，唔係邊緣。
 
 ```python
-run_model("7", "lasso", "Lasso (alpha=0.0005)",
-          linear_pipeline(Lasso(alpha=0.0005, max_iter=50000)), X_final, X_test_final)
-run_model("7b", "elasticnet", "ElasticNet (alpha=0.001, l1_ratio=0.5)",
-          linear_pipeline(ElasticNet(alpha=0.001, l1_ratio=0.5, max_iter=50000)),
+lasso_alpha = tune_alpha(lambda a: Lasso(alpha=a, max_iter=50000), [0.0002, 0.0005, 0.001], "Lasso")
+enet_alpha = tune_alpha(lambda a: ElasticNet(alpha=a, l1_ratio=0.5, max_iter=50000),
+                        [0.0005, 0.001, 0.002], "ElasticNet")
+```
+- `lambda a: Lasso(alpha=a, ...)` 就係嗰個「俾 alpha 整 model」嘅一行 function（lambda → Part 0 §1.3）。
+- `max_iter=50000`：Lasso 唔係一步計出答案，而係一步步逼近答案。alpha 細嘅時候要行好多步先收斂，預設嘅 1000 步會唔夠，仲會出警告。
+- 結果：Lasso 0.0005 最好，喺中間；ElasticNet 0.0005 最好，喺邊緣，但 0.0005 同 0.001 差唔到 0.00005，基本上係平坦，所以冇再擴大範圍。
+- ElasticNet 嘅 alpha 範圍點解比 Lasso 大少少？因為佢只有一半係 Lasso penalty（`l1_ratio=0.5`），所以要大啲先有相若嘅力度。
+
+```python
+run_model("7", "lasso", f"Lasso (alpha={lasso_alpha})",
+          linear_pipeline(Lasso(alpha=lasso_alpha, max_iter=50000)), X_final, X_test_final)
+run_model("7b", "elasticnet", f"ElasticNet (alpha={enet_alpha}, l1_ratio=0.5)",
+          linear_pipeline(ElasticNet(alpha=enet_alpha, l1_ratio=0.5, max_iter=50000)),
           X_final, X_test_final)
 ```
-用揀好嘅設定正式評分同記錄。ElasticNet 嘅 alpha 用 0.001，因為佢只有一半係 Lasso penalty，所以大約要兩倍先有相若嘅力度。
+用揀好嘅 alpha 正式評分同記錄。描述用 f-string，所以會自動寫上真正揀中嘅數值。
 
 ```python
-lasso_fit = linear_pipeline(Lasso(alpha=0.0005, max_iter=50000)).fit(X_final[~outlier], np.log(y[~outlier]))
+lasso_fit = linear_pipeline(Lasso(alpha=lasso_alpha, max_iter=50000)).fit(X_final[~outlier], np.log(y[~outlier]))
 coefficients = lasso_fit.named_steps["model"].coef_
 print(f"Lasso kept {np.sum(coefficients != 0)} of {len(coefficients)} columns (the rest are exactly 0)")
 ```
@@ -163,8 +187,8 @@ print(f"Lasso kept {np.sum(coefficients != 0)} of {len(coefficients)} columns (t
 
 ### 2.3 點睇結果
 
-- **Lasso 0.1255，好過 Ridge 0.1277。** 324 欄入面，Lasso 只用咗 107 欄，其餘 217 欄（大部份係罕見類別嘅 one-hot 欄）被設做 0。呢啲欄幾乎全部係雜訊；Ridge 仲會俾佢哋少少權重，Lasso 就直接丟棄，所以 overfit 少啲。
-- **ElasticNet 0.1257，同 Lasso 差唔多。** 呢份數據入面，「保留成組相關特徵」冇帶來額外好處。
+- **Lasso 0.1255，好過 Ridge 0.1277。** 324 欄入面，Lasso 只用咗 107 欄，其餘 217 欄被設做 0。呢啲欄對預測冇額外幫助：可能係雜訊（例如得幾間屋嘅罕見類別），亦可能同其他欄重複（例如 GarageCars 同 GarageArea 講緊差唔多嘅嘢）。Ridge 仲會俾佢哋少少權重，Lasso 就直接丟棄，所以 overfit 少啲。
+- **ElasticNet 0.1257（0.12565），同 Lasso 差唔多。** 呢份數據入面，「保留成組相關特徵」冇帶來額外好處。
 - **報告可以講：** 「Lasso 自動將 324 個特徵減到 107 個，證明 one-hot 之後有大量冗餘特徵。」
 
 ---
@@ -208,7 +232,7 @@ Step 8–10 都係由決策樹砌成，所以先講清楚一棵樹係點運作�
 
 **Bagging = Bootstrap aggregating**
 
-1. **Bootstrap：** 由 1458 間屋入面「有放返」咁抽 1458 次。有啲屋會被抽中幾次，有啲一次都冇（大約 37% 唔會被抽中）。每棵樹都用自己嗰份隨機樣本去訓練。
+1. **Bootstrap：** 由每個 fold 嘅訓練屋（大約 1166 間）入面「有放返」咁抽同樣數量。有啲屋會被抽中幾次，有啲一次都冇（大約 37% 唔會被抽中）。每棵樹都用自己嗰份隨機樣本去訓練。
 2. **隨機揀欄：** 每次分叉只可以喺隨機揀出嘅部份欄入面揀（`max_features=0.3`，即係 30%）。咁樣每棵樹都唔同。
 3. **Aggregating：** 300 棵樹各自估價，然後取**平均**。
 
@@ -246,6 +270,8 @@ run_model("8", "rf", "Random Forest (300 trees)",
 ## 5. Step 9：XGBoost（boosting）
 
 ### 5.1 概念：逐棵樹去改錯
+
+XGBoost 全名係 eXtreme **Gradient Boosting**，CatBoost 都係 gradient boosting。「gradient」聽落好深，但用平方誤差時，佢其實就係**每間屋仲差幾多**（residual，即係真實 − 估計），亦即係下一棵樹要學嘅嘢。
 
 **Boosting 嘅做法同 bagging 完全相反：**
 
@@ -285,14 +311,14 @@ run_model("9", "xgb", "XGBoost (1500 trees, depth 3, lr 0.03)",
 - `max_depth=3`：每棵樹最多問 3 層問題（最多 8 片葉）。boosting 要用**淺**樹，每棵只負責修正少少，唔需要（亦唔應該）一棵樹就學晒。
 - `subsample=0.8`：每棵樹隨機用 80% 嘅屋，引入少少 bagging 嘅隨機性，防止 overfit。
 - `colsample_bytree=0.5`：每棵樹隨機用 50% 嘅欄，原因同上。
-- `min_child_weight=2`：每片葉最少要有一定數量嘅數據，防止為一兩間屋特登開一片葉。
+- `min_child_weight=2`：用平方誤差時，即係每片葉最少要有 2 間屋，防止為一間屋特登開一片葉。
 - 呢啲數值係常見嘅合理設定，**冇做大範圍調參**，因為時間有限，而且調得太盡會令 CV 太樂觀。
 
 ### 5.3 點睇結果：0.1231，全場第一
 
-**同 Random Forest 用嘅係同一啲樹、同一啲特徵，分別只係「點樣組合」，分數就由 0.138 變成 0.123。** 報告值得寫：「model 嘅組合方式，可以比 model 嘅基本單位更重要。」
+**同 Random Forest 一樣用決策樹做基本單位、用同一套特徵，分別在於點樣種同點樣組合（深樹各自訓練再平均 vs 淺樹逐棵改錯再加埋），分數就由 0.138 變成 0.123。** 報告值得寫：「組合樹嘅方法，可以比樹本身更重要。」
 
-而且只用咗 4 秒，比 Random Forest 仲快。原因係每棵樹好淺，而 XGBoost 嘅實作本身好高效。
+而且只用咗大約 4 秒，比 Random Forest 仲快。原因係每棵樹好淺，而 XGBoost 嘅實作本身好高效。
 
 ---
 
@@ -306,13 +332,13 @@ CatBoost 都係 gradient boosting，原理同 XGBoost 一樣，但有兩個特�
 
 one-hot 嘅問題：Neighborhood 有 25 個地區，就會變成 25 欄 0/1。罕見嘅地區得幾間屋，好難學。
 
-CatBoost 嘅做法係將每個類別換成「**呢個類別嘅屋，平均價錢係幾多**」，叫 target statistics。例如 NoRidge 地區平均 log 價錢係 12.6，就用 12.6 代替 "NoRidge"。
+CatBoost 嘅做法係將每個類別換成「**呢個類別嘅屋，平均價錢係幾多**」，叫 target statistics。例如 NoRidge 地區平均 log 價錢係 12.7，就用 12.7 代替 "NoRidge"。
 
 **但咁樣會 leak！** 計平均時，如果包括咗呢間屋自己嘅價錢，就等於偷睇答案。CatBoost 嘅解決方法叫 **ordered target statistics**：將屋隨機排好次序，每間屋只用「排喺佢前面」嘅屋計平均。咁樣每間屋都唔會用到自己嘅答案。仲會加 smoothing：屋好少嘅類別，會向整體平均靠攏。
 
 **2. 對稱樹（symmetric / oblivious trees）**
 
-同一層嘅所有分叉都問**同一條問題**。例如第一層全部問「OverallQual ≥ 7？」，第二層全部問「TotalSF > 2000？」。呢種樹比較簡單、限制多，所以喺細數據（1460 行）上唔容易 overfit。
+同一層嘅所有分叉都問**同一條問題**。例如第一層（得一個分叉）問「OverallQual ≥ 7？」，之後第二層**兩邊**都問「TotalSF > 2000？」，第三層四個分叉全部問同一條……呢種樹比較簡單、限制多，所以喺細數據（1460 行）上唔容易 overfit。
 
 ### 6.2 逐行解釋
 
@@ -355,8 +381,8 @@ save_submission("s5_catboost", test_preds["catboost"])
 ### 6.3 點睇結果：0.1232，同 XGBoost 幾乎打和
 
 - 兩者都係 boosting，所以表現相近合理。
-- CatBoost 冇用 log 特徵、冇用 one-hot，但結果一樣好。即係話，**樹 model 唔需要 Part 3 嘅 log 處理**，同 §3.2 講嘅一致。
-- 代價係慢好多：80 秒，XGBoost 只要 4 秒。原因係 ordered target statistics 要額外計算。
+- CatBoost 嘅特徵冇取 log、冇用 one-hot（target 仍然係 log 價錢，因為 `run_model` 用 `target="log"`），但結果一樣好。即係話，**樹 model 唔需要 Part 3 嘅 log 處理**，同 §3.2 講嘅一致。
+- 代價係慢好多：大約 80 秒，XGBoost 只要大約 4 秒。原因有兩個：(1) ordered target statistics 要額外計算；(2) 樹深 6 即係每棵樹有 64 片葉，XGBoost 樹深 3 得 8 片。
 - 點解仲要兩個都留？因為佢哋處理類別嘅方法唔同（one-hot vs target statistics），犯嘅錯可能唔同。Part 5 會驗證呢點。
 
 ---
@@ -365,7 +391,11 @@ save_submission("s5_catboost", test_preds["catboost"])
 
 ### 7.1 概念
 
-**核心：用「相似度」估價。** 要估一間新屋，SVR 會睇佢同每一間訓練屋有幾「似」，似嘅屋影響大，唔似嘅屋影響細。
+**核心：用「相似度」估價。** 要估一間新屋，SVR 會睇佢同一啲訓練屋有幾「似」，似嘅屋影響大，唔似嘅屋影響細。
+
+**兩個名詞：**
+- **Kernel（核函數）**：計兩間屋有幾相似嘅公式。
+- **Support vector（支持向量）**：訓練完之後，只有誤差大過 ε（落喺下面講嘅「容忍管」外面）嘅訓練屋會影響預測。呢啲屋就叫 support vectors，SVR 個名就係咁嚟。所以準確啲講，SVR 係睇新屋同每一間 **support vector** 有幾似。
 
 **「似」點樣量度？** 用 RBF kernel：
 
@@ -379,7 +409,7 @@ save_submission("s5_catboost", test_preds["catboost"])
   - gamma 大：只有好近嘅屋先算似，曲線好彎，容易 overfit；
   - gamma 細：好遠都算似，曲線好平，容易 underfit。
 
-**點解一定要標準化？** 距離係所有特徵差距嘅總和。唔標準化嘅話，LotArea（幾萬）嘅差距會蓋過晒 OverallQual（1–10）嘅差距，等於只睇地皮面積。我哋嘅 pipeline 有 StandardScaler，所以冇問題。
+**點解一定要標準化？** 距離係所有特徵差距嘅總和。唔標準化嘅話，YearBuilt（大約 1900–2010，相差可以過 100）嘅差距會蓋過晒 OverallQual（1–10）嘅差距，等於只睇年份。我哋嘅 pipeline 有 StandardScaler，所以冇問題。
 
 **epsilon 同 C：**
 - **epsilon（ε）**：誤差細過 ε（0.01，即係大約 1%）就當冇錯，唔罰。呢個「容忍管」令 model 唔使遷就每一個細誤差。
@@ -410,6 +440,17 @@ best_C, best_gamma = min(svr_scores, key=svr_scores.get)
 - 因為 key 係 tuple，可以直接拆開放入兩個名（unpacking）。
 
 ```python
+for C, gamma in [(0.3, 0.003), (1, 0.005), (1, 0.01), (0.3, 0.01)]:
+    score, _, _ = cv_evaluate(linear_pipeline(SVR(C=C, epsilon=0.01, gamma=gamma)),
+                              X_final, y, X_test_final, drop_outliers=True)
+    print(f"beyond the grid: SVR C={C}, gamma={gamma}: {score:.5f}")
+print(f"best on the grid: C={best_C}, gamma={best_gamma}: {svr_scores[(best_C, best_gamma)]:.5f}")
+```
+- 最好嘅組合（C=1、γ=0.003）落喺格網嘅角落，所以再試幾個喺角落**外面**嘅組合。
+- 呢個只係「檢查」，唔會用嚟揀參數。
+- 結果全部都差過角落嗰個（0.1243–0.1302 vs 0.1235），所以角落係佢附近嘅最好位置（local minimum）。但呢個唔係證明「全世界冇更好」，只係附近冇。
+
+```python
 run_model("11", "svr", f"SVR (C={best_C}, gamma={best_gamma})",
           linear_pipeline(SVR(C=best_C, epsilon=0.01, gamma=best_gamma)), X_final, X_test_final)
 ```
@@ -422,11 +463,11 @@ run_model("11", "svr", f"SVR (C={best_C}, gamma={best_gamma})",
 | 第 1 次 | 10, 30 | 0.0003, 0.001 | C=10, γ=0.0003 | 兩個都喺邊緣 |
 | 第 2 次 | 3, 10, 30 | 0.0001–0.001 | C=3, γ=0.001 | 又喺邊緣 |
 | 第 3 次 | 1, 3, 10, 30 | 0.0001–0.003 | **C=1, γ=0.003** | 喺角落，要再驗證 |
-| 驗證 | 0.3, 1 | 0.003–0.01 | 外面全部更差 | ✓ 真正嘅最低點 |
+| 檢查 | 0.3、1 | 0.003、0.005、0.01 | 角落外面全部更差 | ✓ 附近最好（local minimum） |
 
-- **點解會一路「走位」？** C 同 gamma 會互相抵銷：「C 細 + gamma 大」同「C 大 + gamma 細」嘅效果相似。所以好嘅組合係沿住一條斜線分佈，唔係集中喺一點。
+- **點解會一路「走位」？** C 同 gamma 會互相抵消：「C 細 + gamma 大」同「C 大 + gamma 細」嘅效果相似。所以好嘅組合係沿住一條斜線分佈，唔係集中喺一點。
 - **教訓：** 調參一定要檢查最好嘅值係咪喺邊緣；如果係，要擴大範圍。
-- **代價：** 試得越多組合，越有機會揀中「啱啱好喺呢 5 個 fold 表現好」嘅值，CV 分數就越樂觀。所以我哋只試咗 16 + 5 個組合，冇無限咁試落去。
+- **代價：** 試得越多組合，越有機會揀中「啱啱好喺呢 5 個 fold 表現好」嘅值，CV 分數就越樂觀。所以我哋最後只用 16 個組合嚟揀，加 4 個角落外面嘅檢查，冇無限咁試落去。
 
 ### 7.4 點睇結果：0.1235，第三
 
@@ -471,7 +512,7 @@ ax.set(..., xlim=(comparison.cv_rmse.min() * 0.95, comparison.cv_rmse.max() * 1.
 |---|---|---|---|
 | S5 | `s5_catboost.csv` | CatBoost | 0.1232 |
 
-只交 CatBoost，係因為佢係第一個「樹 model」嘅代表，可以同 S4（Ridge）比較線性 vs 樹喺 leaderboard 上嘅分別。XGBoost CV 稍好，但兩者差 0.0001，冇統計上嘅分別；而且 Kaggle 每日 submission 次數有限。最終嘅 S6 blend 會將所有好嘅 model 都用埋。
+只交 CatBoost，係因為佢係第一個「樹 model」嘅代表，可以同 S4（Ridge）比較線性 vs 樹喺 leaderboard 上嘅分別。XGBoost CV 稍好，但兩者只差 0.0001，細到實際上可以當打和（我哋冇做統計檢定）；而且 Kaggle 每日 submission 次數有限。最終嘅 S6 blend 會將所有好嘅 model 都用埋。
 
 ---
 
