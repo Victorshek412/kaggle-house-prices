@@ -137,6 +137,12 @@ test = read_csv("test.csv")
 sample = read_csv("sample_submission.csv")
 print("train:", train.shape, " test:", test.shape)
 ```
+
+跑出嚟會見到：
+
+```text
+train: (1460, 81)  test: (1459, 80)
+```
 - 讀三個檔案。`sample` 係 Kaggle 俾嘅提交格式範本，之後用嚟對齊 Id。
 - `.shape` 回傳（行數, 欄數）。結果係 train (1460, 81)，test (1459, 80)。test 少一欄，因為冇 SalePrice。
 
@@ -146,6 +152,25 @@ print("train:", train.shape, " test:", test.shape)
 print(train.dtypes.value_counts())
 train.head()
 ```
+
+跑出嚟會見到：
+
+```text
+object     43
+int64      35
+float64     3
+Name: count, dtype: int64
+
+   Id  MSSubClass MSZoning  LotFrontage  LotArea Street Alley LotShape  ...
+0   1          60       RL         65.0     8450   Pave   NaN      Reg   ...
+1   2          20       RL         80.0     9600   Pave   NaN      Reg   ...
+2   3          60       RL         68.0    11250   Pave   NaN      IR1   ...
+3   4          70       RL         60.0     9550   Pave   NaN      IR1   ...
+4   5          60       RL         84.0    14260   Pave   NaN      IR1   ...
+[5 rows x 81 columns]
+```
+
+（表太闊，`...` 代表中間啲欄被省略咗。留意 Alley 一欄全部係 NaN：呢 5 間屋都冇後巷，正正係 Part 1 §1.4 講嘅「NA = 冇呢樣嘢」。）
 - 數下每種資料類型有幾多欄：object（文字）43 欄、int64 35 欄、float64 3 欄。
 - `head()` 顯示頭 5 行。
 - 一個 cell 最後嗰行嘅結果，Jupyter 會自動顯示出嚟，所以唔使寫 `print`。
@@ -174,6 +199,12 @@ fig.tight_layout()
 fig.savefig(OUT_DIR / "figures" / "01_saleprice_distribution.png", dpi=120)
 plt.show()
 ```
+
+跑出嚟嘅圖：
+
+![SalePrice distribution](../results/figures/01_saleprice_distribution.png)
+
+左邊原價：一大堆屋擠喺左邊，條尾巴拖到 75 萬。右邊 log 價錢：差唔多左右對稱，好似一個鐘。
 - `tight_layout` 自動調整，費事啲字重疊。
 - `savefig` 存圖，之後放入報告同 slides。
 - `show` 喺 notebook 入面顯示幅圖。
@@ -224,6 +255,14 @@ missing = missing.sort_values("train", ascending=False)
 ```python
 print("Columns missing only in test:", missing.index[missing.train.eq(0)].tolist())
 ```
+
+跑出嚟會見到：
+
+```text
+Columns missing only in test: ['MSZoning', 'BsmtFinSF2', 'BsmtUnfSF', 'Utilities', 'Exterior2nd',
+'Exterior1st', 'BsmtFinSF1', 'TotalBsmtSF', 'BsmtHalfBath', 'KitchenQual', 'Functional',
+'BsmtFullBath', 'GarageArea', 'GarageCars', 'SaleType']
+```
 - `missing.train.eq(0)`：train 缺失數係咪等於 0（`.eq(0)` 即係 `== 0`）。
 - `missing.index[...]`：用呢串 True/False 揀出對應嘅欄名。
 - `.tolist()`：變成普通 list，印出嚟易睇啲。
@@ -235,6 +274,30 @@ top = missing.head(20).iloc[::-1]
 colors = np.where(top.kind.eq("NA = absent"), "orange", "gray")
 ax.barh(top.index, top.train, color=colors)
 ```
+
+跑出嚟嘅圖：
+
+![Missing values](../results/figures/02_missing_values.png)
+
+跑出嚟會見到：
+
+```text
+              train  test           kind
+PoolQC         1453  1456    NA = absent
+MiscFeature    1406  1408    NA = absent
+Alley          1369  1352    NA = absent
+Fence          1179  1169    NA = absent
+FireplaceQu     690   730    NA = absent
+LotFrontage     259   227  truly unknown
+GarageYrBlt      81    78    NA = absent
+GarageType       81    76    NA = absent
+...
+MSZoning          0     4  truly unknown
+GarageCars        0     1  truly unknown
+SaleType          0     1  truly unknown
+```
+
+（cell 最後一行 `missing` 會顯示成張表，呢度只列部份。）每一行係 train 嘅一個欄：train 欄係 train 缺幾多格，test 欄係 test 缺幾多格，kind 係我哋標記嘅缺失種類。
 - 揀缺失最多嘅 20 欄。`iloc[::-1]` 將次序倒轉（slicing → Part 0 §1.2），咁最多嗰欄就會喺橫向棒形圖嘅最上面，因為 `barh` 係由下而上畫。
 - 橙色代表「NA = 冇」，灰色代表「唔知」。
 - 呢度用 `fig, ax = plt.subplots(...)`（得一格圖，所以叫 `ax`），Cell 3 就用 `axes`（兩格）。Figure 同 Axes 嘅分別 → Part 0 §6。
@@ -260,6 +323,20 @@ ax.scatter(train.GrLivArea[outlier], train.SalePrice[outlier], s=150,
 ```python
 train.loc[outlier, ["Id", "GrLivArea", "SalePrice", "OverallQual", "SaleCondition"]]
 ```
+
+跑出嚟嘅圖：
+
+![Outliers](../results/figures/03_outliers.png)
+
+跑出嚟會見到：
+
+```text
+        Id  GrLivArea  SalePrice  OverallQual SaleCondition
+523    524       4676     184750           10       Partial
+1298  1299       5642     160000           10       Partial
+```
+
+左邊 523、1298 係 index（行號，由 0 數起），所以同 Id（由 1 數起）差 1。兩間都係最高質素（10 分）、面積最大，但賣得好平，而且都係 Partial sale。
 - 用 `.loc[邊啲行, 邊啲欄]` 攞出嗰兩間屋嘅資料（→ Part 0 §3.2）。
 - **注意：** 呢個 `outlier` 變數之後 Part 2 嘅 `cv_evaluate` 會再用（Step 6 拎走 outlier 嗰陣）。佢係用**原始數據**計嘅，所以之後就算面積取咗 log，佢都唔會變。
 - 會見到 `SaleCondition = Partial`，呢個就係拎走佢哋嘅**理由**，唔係淨係因為佢哋「睇落怪」。
@@ -291,6 +368,26 @@ ax.barh(top10.index, top10.values, color="steelblue")
 
 ```python
 top10.iloc[::-1].round(3)
+```
+
+跑出嚟嘅圖：
+
+![Top correlations](../results/figures/04_top_correlations.png)
+
+跑出嚟會見到：
+
+```text
+OverallQual     0.791
+GrLivArea       0.709
+GarageCars      0.640
+GarageArea      0.623
+TotalBsmtSF     0.614
+1stFlrSF        0.606
+FullBath        0.561
+TotRmsAbvGrd    0.534
+YearBuilt       0.523
+YearRemodAdd    0.507
+Name: SalePrice, dtype: float64
 ```
 倒轉次序（最高嘅排第一），取 3 個小數位，顯示成表。
 

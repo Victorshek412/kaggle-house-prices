@@ -158,6 +158,18 @@ def cv_evaluate(model, X, y, X_test, target="log", drop_outliers=False):
 ```python
     for train_idx, valid_idx in kf.split(X):
 ```
+
+**實際切出嚟係咁**（每個 fold 嘅行數，同驗證嗰份頭 3 間屋嘅 Id）：
+
+```text
+fold 1: train 1168 rows, valid 292 rows, first valid Ids [16, 24, 30]
+fold 2: train 1168 rows, valid 292 rows, first valid Ids [4, 6, 11]
+fold 3: train 1168 rows, valid 292 rows, first valid Ids [1, 3, 7]
+fold 4: train 1168 rows, valid 292 rows, first valid Ids [5, 12, 17]
+fold 5: train 1168 rows, valid 292 rows, first valid Ids [2, 9, 14]
+```
+
+1168 + 292 = 1460。每間屋只會喺其中一個 fold 做驗證，例如 Id 1 喺 fold 3。因為 `shuffle=True`，驗證屋係打亂咗嘅，唔係頭 292 間。
 - 行 5 次，每次 `kf.split` 會俾出兩組**行號**：一組係訓練嘅行，一組係驗證嘅行。
 - 一次拆兩個值落 `train_idx` 同 `valid_idx`（unpacking → Part 0 §1.4）。
 - `X.iloc[train_idx]` 嘅意思係「用位置揀出呢啲行」（→ Part 0 §3.2）。
@@ -292,6 +304,12 @@ score, _, _ = cv_evaluate(DummyRegressor(strategy="mean"), X, y, X_test, target=
 - **點解用 `target="raw"`？** 「估平均價」就係原價嘅平均（例如 18 萬），同 Step 1 一樣喺原價尺度訓練，兩個先可以公平比較。
 - `_` 係 Python 嘅慣例，代表「呢個回傳值我唔要」。
 
+跑出嚟會見到：
+
+```text
+Step 0: CV RMSE 0.40776
+```
+
 ### Cell 3：Step 1
 
 ```python
@@ -303,6 +321,21 @@ ridge_raw = Pipeline([("prep", make_linear_preprocessor()), ("model", Ridge(alph
 score, oof_step1, test_step1 = cv_evaluate(ridge_raw, X, y, X_test, target="raw")
 record("1", "Ridge, raw price, minimal preprocessing", score)
 save_submission("s1_ridge_raw", test_step1)
+```
+
+跑出嚟會見到：
+
+```text
+Step 1: CV RMSE 0.15534 (-0.25243 vs previous step)
+saved s1_ridge_raw.csv
+```
+
+第一行係 `record` 印嘅：分數 0.15534，同上一步（Step 0）比跌咗 0.25243。第二行係 `save_submission` 印嘅。Part 2 最後一格 `results` 會顯示成績表：
+
+```text
+  step                              description   cv_rmse
+0    0                   Predict the mean price  0.407762
+1    1  Ridge, raw price, minimal preprocessing  0.155335
 ```
 評分、記錄、出一個 submission 檔案。呢個就係你**第一次 Kaggle submission（S1）**。
 

@@ -121,6 +121,12 @@ for i in range(len(names)):
 ```python
 fig.colorbar(image, label="correlation of OOF residuals")
 ```
+
+跑出嚟嘅圖：
+
+![OOF residual correlation](../results/figures/06_oof_correlation.png)
+
+點睇：每一格係「行嗰個 model」同「欄嗰個 model」嘅錯誤有幾相似。對角線一定係 1.00（自己同自己）。顏色越深越似。左上角三個線性 model 深藍一片，即係錯法幾乎一樣。
 喺旁邊加一條色標，話俾人知邊種顏色代表幾多。
 
 ### Cell 2（markdown）：點睇熱力圖
@@ -159,6 +165,15 @@ blend_score = np.sqrt(np.mean((y_log - blend_oof) ** 2))
 record("12", "Blend: Lasso + XGBoost + CatBoost + SVR, equal weights", blend_score)
 save_submission("s6_blend", blend_test)
 ```
+
+跑出嚟會見到：
+
+```text
+Step 12: CV RMSE 0.11906 (-0.00442 vs previous step)
+saved s6_blend.csv
+```
+
+−0.00442 係同上一行（SVR，0.12349）比。同最好嘅 XGBoost（0.12310）比係 −0.0040，報告用後者。
 記錄，出最終 submission **S6**。
 
 ### Cell 4：其他 blend 做對比（只係參考）
@@ -176,6 +191,17 @@ pd.Series({
     ...
 }).round(5).to_frame("cv_rmse")
 ```
+
+跑出嚟會見到：
+
+```text
+                                 cv_rmse
+best single model (xgb)          0.12310
+XGBoost + CatBoost               0.12099
+Lasso + XGBoost                  0.12044
+chosen 4-model blend             0.11906
+all models except Random Forest  0.12022
+```
 - 用 dict 整一個 Series，再用 `.to_frame` 轉做表格，咁顯示會靚啲。
 - 第一行嘅名用 f-string 自動填上最好嘅 model 名（`comparison.index[0]`，即係比較表排第一嗰個），所以喺 Kaggle 跑如果排名有變，個名都會啱。
 - **重要：** 呢啲數字係**揀完先睇**嘅，用嚟理解，唔係用嚟揀。
@@ -186,7 +212,7 @@ pd.Series({
 | XGBoost + CatBoost | 0.1210 | 兩個 boosting 都有少少互補 |
 | Lasso + XGBoost | 0.1204 | 線性 + 樹，更互補（correlation 0.88 < 0.93） |
 | **揀中嘅 4 個** | **0.1191** | 4 個家族，最互補 |
-| 除 Random Forest 外全部 6 個 | 0.1203 | 反而差啲！ |
+| 除 Random Forest 外全部 6 個 | 0.1202 | 反而差啲！ |
 
 **點解「全部都用」反而差？** 6 個入面有 3 個係幾乎一樣嘅線性 model，等於線性 model 有 3 票，boosting 同 SVR 加埋先得 3 票。投票權被重複嘅 model 霸佔，平均就偏向線性 model 嘅錯誤。**數量多唔代表好，多樣性先重要。**
 
@@ -222,6 +248,18 @@ for i, value in enumerate(steps.cv_rmse):
 ```python
 ax.set(..., ylim=(0.11, 0.16))
 ```
+
+跑出嚟嘅圖：
+
+![Improvement staircase](../results/figures/07_improvement_staircase.png)
+
+跑出嚟會見到：
+
+```text
+Step 0 (predict the mean) scored 0.4078; it is left off the chart.
+```
+
+（呢行係 cell 最後嘅 `print` 印嘅，提醒睇圖嘅人 Step 0 冇畫入去。）
 - y 軸由 0.11 開始，唔係由 0 開始。
 - **報告用呢幅圖時一定要講明**：因為 y 軸唔由 0 開始，棒嘅高度差會睇落比實際大。例如 step 5 對 step 4 嘅跌幅係 12.4%，唔係幅圖睇落咁似一半。
 
@@ -241,6 +279,18 @@ summary = pd.DataFrame({
     "cv_rmse": [cv_by_step[s] for s in submission_steps.values()],
 })
 summary.to_csv(OUT_DIR / "submission_summary.csv", index=False)
+```
+
+跑出嚟會見到：
+
+```text
+        submission step  cv_rmse
+0     s1_ridge_raw    1  0.15534
+1  s2_new_features    4  0.15121
+2  s3_log_features    5  0.13239
+3   s4_no_outliers   6b  0.12766
+4      s5_catboost   10  0.12320
+5         s6_blend   12  0.11906
 ```
 - `list(dict)` 會攞出所有 key；`.values()` 攞出所有 value。
 - 存成 `submission_summary.csv`。

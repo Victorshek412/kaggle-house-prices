@@ -37,7 +37,7 @@ Part 3 已經將**特徵定好**。Part 4 反過嚟做：**特徵唔郁，只換
 
 ### 0.3 留意：成績表入面嘅「vs previous step」
 
-`record` 每次都會同成績表上一行比較。Part 3 嘅 step 係一步疊一步，所以比較有意思；但 Part 4 每個 model 都係獨立嘅，「同上一個 model 比」就冇意思。例如 Step 8 嘅 +0.01254，只係話 Random Forest 差過 ElasticNet。
+`record` 每次都會同成績表上一行比較。Part 3 嘅 step 係一步疊一步，所以比較有意思；但 Part 4 每個 model 都係獨立嘅，「同上一個 model 比」就冇意思。例如 Step 8 嘅 +0.01258，只係話 Random Forest 差過 ElasticNet。
 
 **Part 4 請睇最尾嗰張比較表同比較圖。**
 
@@ -103,6 +103,14 @@ def linear_pipeline(model):
 ```python
 run_model(None, "ridge", "Ridge", linear_pipeline(Ridge(alpha=best_alpha)), X_final, X_test_final)
 ```
+
+跑出嚟會見到：
+
+```text
+ridge: CV RMSE 0.12766   (0 s)
+```
+
+因為 step 係 None，所以印嘅係 model 名，唔係「Step …」，亦冇加入成績表。（0 s 係因為 Ridge 好快，不足 0.5 秒四捨五入咗。）
 - 重新跑一次 Part 3 最好嗰個 Ridge，目的係將佢嘅預測存入 `oof["ridge"]`，Part 5 要用。
 - `step` 傳 `None`：Ridge 已經喺 Part 3 記錄咗（Step 6b），唔使再加一行。
 
@@ -160,6 +168,17 @@ lasso_alpha = tune_alpha(lambda a: Lasso(alpha=a, max_iter=50000), [0.0002, 0.00
 enet_alpha = tune_alpha(lambda a: ElasticNet(alpha=a, l1_ratio=0.5, max_iter=50000),
                         [0.0005, 0.001, 0.002], "ElasticNet")
 ```
+
+跑出嚟會見到：
+
+```text
+Lasso alpha=0.0002: 0.12611
+Lasso alpha=0.0005: 0.12546
+Lasso alpha=0.001: 0.12748
+ElasticNet alpha=0.0005: 0.12565
+ElasticNet alpha=0.001: 0.12569
+ElasticNet alpha=0.002: 0.12766
+```
 - `lambda a: Lasso(alpha=a, ...)` 就係嗰個「俾 alpha 整 model」嘅一行 function（lambda → Part 0 §1.3）。
 - `max_iter=50000`：Lasso 唔係一步計出答案，而係一步步逼近答案。alpha 細嘅時候要行好多步先收斂，預設嘅 1000 步會唔夠，仲會出警告。
 - 結果：Lasso 0.0005 最好，喺中間；ElasticNet 0.0005 最好，喺邊緣，但 0.0005 同 0.001 差唔到 0.00005，基本上係平坦，所以冇再擴大範圍。
@@ -172,12 +191,29 @@ run_model("7b", "elasticnet", f"ElasticNet (alpha={enet_alpha}, l1_ratio=0.5)",
           linear_pipeline(ElasticNet(alpha=enet_alpha, l1_ratio=0.5, max_iter=50000)),
           X_final, X_test_final)
 ```
+
+跑出嚟會見到：
+
+```text
+Step 7: CV RMSE 0.12546 (-0.00219 vs previous step)
+   (2 s)
+Step 7b: CV RMSE 0.12565 (+0.00018 vs previous step)
+   (3 s)
+```
+
+Step 7 嘅「vs previous step」係同 Step 6b（Ridge）比，所以 −0.00219 即係 Lasso 好過 Ridge。
 用揀好嘅 alpha 正式評分同記錄。描述用 f-string，所以會自動寫上真正揀中嘅數值。
 
 ```python
 lasso_fit = linear_pipeline(Lasso(alpha=lasso_alpha, max_iter=50000)).fit(X_final[~outlier], np.log(y[~outlier]))
 coefficients = lasso_fit.named_steps["model"].coef_
 print(f"Lasso kept {np.sum(coefficients != 0)} of {len(coefficients)} columns (the rest are exactly 0)")
+```
+
+跑出嚟會見到：
+
+```text
+Lasso kept 107 of 324 columns (the rest are exactly 0)
 ```
 呢 3 行唔係評分，係**睇入 model 入面**，驗證 Lasso 真係揀咗特徵：
 - 用全部（除咗 outlier 嘅）訓練數據 fit 一次。`X_final[~outlier]` 用 boolean mask 揀行（→ Part 0 §2.3）。
@@ -248,6 +284,13 @@ run_model("8", "rf", "Random Forest (300 trees)",
                                                 min_samples_leaf=2, n_jobs=-1, random_state=42)),
           X_final, X_test_final)
 ```
+
+跑出嚟會見到：
+
+```text
+Step 8: CV RMSE 0.13822 (+0.01258 vs previous step)
+   (12 s)
+```
 - `n_estimators=300`：300 棵樹。越多越穩定，但越慢；去到幾百棵之後，再加都冇乜分別。
 - `max_features=0.3`：每次分叉只考慮 30% 嘅欄，令樹與樹之間更唔同。
 - `min_samples_leaf=2`：每片葉最少要有 2 間屋，防止樹分得太盡（死記單一間屋）。
@@ -305,6 +348,13 @@ run_model("9", "xgb", "XGBoost (1500 trees, depth 3, lr 0.03)",
                                        subsample=0.8, colsample_bytree=0.5, min_child_weight=2,
                                        n_jobs=-1, random_state=42)),
           X_final, X_test_final)
+```
+
+跑出嚟會見到：
+
+```text
+Step 9: CV RMSE 0.12310 (-0.01513 vs previous step)
+   (4 s)
 ```
 - `n_estimators=1500`：種 1500 棵樹。
 - `learning_rate=0.03`：每棵樹只加 3%（見上面）。learning rate 同樹數要一齊諗：learning rate 細，就要多啲樹。
@@ -376,6 +426,16 @@ catboost = CatBoostRegressor(iterations=1500, learning_rate=0.03, depth=6, l2_le
 run_model("10", "catboost", ..., catboost, X_cat, X_cat_test)
 save_submission("s5_catboost", test_preds["catboost"])
 ```
+
+跑出嚟會見到：
+
+```text
+Step 10: CV RMSE 0.12320 (+0.00010 vs previous step)
+   (86 s)
+saved s5_catboost.csv
+```
+
+CatBoost 慢好多（86 秒），喺 Kaggle 可能要 2 至 3 分鐘，等佢跑完先好撳下一格。
 評分同記錄，再出 submission **S5**。
 
 ### 6.3 點睇結果：0.1232，同 XGBoost 幾乎打和
@@ -429,6 +489,29 @@ for C in [1, 3, 10, 30]:
             X_final, y, X_test_final, drop_outliers=True)
         print(f"SVR C={C}, gamma={gamma}: {svr_scores[(C, gamma)]:.5f}")
 ```
+
+跑出嚟會見到：
+
+```text
+SVR C=1, gamma=0.0001: 0.14474
+SVR C=1, gamma=0.0003: 0.13183
+SVR C=1, gamma=0.001: 0.12572
+SVR C=1, gamma=0.003: 0.12349   <- 最好
+SVR C=3, gamma=0.0001: 0.13234
+SVR C=3, gamma=0.0003: 0.12729
+SVR C=3, gamma=0.001: 0.12540
+SVR C=3, gamma=0.003: 0.12704
+SVR C=10, gamma=0.0001: 0.12733
+SVR C=10, gamma=0.0003: 0.12657
+SVR C=10, gamma=0.001: 0.12813
+SVR C=10, gamma=0.003: 0.13266
+SVR C=30, gamma=0.0001: 0.12684
+SVR C=30, gamma=0.0003: 0.12828
+SVR C=30, gamma=0.001: 0.13193
+SVR C=30, gamma=0.003: 0.13985
+```
+
+（「<- 最好」係我加嘅標記，notebook 唔會印。）試下將佢想像成一個 4×4 嘅格：C 細 + gamma 大（左下）同 C 大 + gamma 細（右上）都好，兩邊都差，所以好嘅組合沿住一條斜線，呢個就係 §7.3 講嘅「互相抵消」。
 - **兩層 for 迴圈**：外層逐個 C，內層逐個 gamma，總共 4 × 4 = 16 個組合，呢種做法叫 **grid search（格網搜尋）**。
 - `svr_scores[(C, gamma)]`：dict 嘅 key 可以係一個 tuple（一對數），咁就記到「邊對參數 → 幾多分」。
 - 兩個參數都係每次大約 ×3，同 Part 3 Ridge alpha 嘅道理一樣（對數尺度）。
@@ -446,6 +529,16 @@ for C, gamma in [(0.3, 0.003), (1, 0.005), (1, 0.01), (0.3, 0.01)]:
     print(f"beyond the grid: SVR C={C}, gamma={gamma}: {score:.5f}")
 print(f"best on the grid: C={best_C}, gamma={best_gamma}: {svr_scores[(best_C, best_gamma)]:.5f}")
 ```
+
+跑出嚟會見到：
+
+```text
+beyond the grid: SVR C=0.3, gamma=0.003: 0.12558
+beyond the grid: SVR C=1, gamma=0.005: 0.12431
+beyond the grid: SVR C=1, gamma=0.01: 0.12999
+beyond the grid: SVR C=0.3, gamma=0.01: 0.13022
+best on the grid: C=1, gamma=0.003: 0.12349
+```
 - 最好嘅組合（C=1、γ=0.003）落喺格網嘅角落，所以再試幾個喺角落**外面**嘅組合。
 - 呢個只係「檢查」，唔會用嚟揀參數。
 - 結果全部都差過角落嗰個（0.1243–0.1302 vs 0.1235），所以角落係佢附近嘅最好位置（local minimum）。但呢個唔係證明「全世界冇更好」，只係附近冇。
@@ -453,6 +546,13 @@ print(f"best on the grid: C={best_C}, gamma={best_gamma}: {svr_scores[(best_C, b
 ```python
 run_model("11", "svr", f"SVR (C={best_C}, gamma={best_gamma})",
           linear_pipeline(SVR(C=best_C, epsilon=0.01, gamma=best_gamma)), X_final, X_test_final)
+```
+
+跑出嚟會見到：
+
+```text
+Step 11: CV RMSE 0.12349 (+0.00029 vs previous step)
+   (5 s)
 ```
 用最好嘅參數正式記錄。
 
@@ -501,6 +601,25 @@ comparison = pd.DataFrame({
 ax.barh(comparison.index[::-1], comparison.cv_rmse[::-1], color="steelblue")
 ax.set(..., xlim=(comparison.cv_rmse.min() * 0.95, comparison.cv_rmse.max() * 1.02))
 ```
+
+跑出嚟嘅圖：
+
+![Model comparison](../results/figures/05_model_comparison.png)
+
+跑出嚟會見到：
+
+```text
+            cv_rmse   seconds
+xgb         0.12310   4.28225
+catboost    0.12320  85.89718
+svr         0.12349   4.75585
+lasso       0.12546   1.97144
+elasticnet  0.12565   2.81175
+ridge       0.12766   0.42453
+rf          0.13822  12.38169
+```
+
+seconds 係每個 model 跑 5-fold CV 用咗幾多秒，每次跑都會有少少唔同。
 - `[::-1]` 倒轉次序，令最好嘅 model 喺圖嘅最上面（barh 係由下而上畫）。
 - `xlim` 設定 x 軸範圍：唔由 0 開始，而係由最細值嘅 95% 開始，咁差異先睇得清楚。**報告用呢類圖要講清楚 x 軸唔係由 0 開始**，否則會誇大差異。
 

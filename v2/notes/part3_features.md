@@ -85,6 +85,12 @@ score, _, _ = cv_evaluate(ridge, X, y, X_test, target="log")
 ```python
 record("2", "Predict log(SalePrice)", score)
 ```
+
+跑出嚟會見到：
+
+```text
+Step 2: CV RMSE 0.15206 (-0.00327 vs previous step)
+```
 加入成績表，並印出同上一步嘅差。
 
 ### 2.3 點睇結果：0.15534 → 0.15206（−2.1%）
@@ -184,6 +190,25 @@ def fill_missing_meaning(df):
 ```python
 X3, X3_test = fill_missing_meaning(X), fill_missing_meaning(X_test)
 ```
+
+**改之前（X）同改之後（X3）**（用真實數據睇吓）：
+
+```text
+X（改之前）：兩間冇車房嘅屋
+    GarageArea GarageType GarageFinish
+39           0        NaN          NaN
+48           0        NaN          NaN
+
+X3（改之後）：同兩間屋
+    GarageArea GarageType GarageFinish
+39           0   NoGarage     NoGarage
+48           0   NoGarage     NoGarage
+
+MSSubClass 嘅資料類型：int64（整數）-> object（文字）
+X3 頭 3 間屋嘅 MSSubClass：['60', '20', '60']
+```
+
+GarageArea 係 0，證實冇車房，所以 NaN 變咗 "NoGarage"。MSSubClass 由數字 60 變成文字 "60"（有引號），之後就會被 one-hot。
 - 對 train 同 test 用**同一個 function**，保證處理方法完全一樣。
 - 一行寫兩個賦值：左邊兩個名，右邊兩個值，按次序對應。
 - 用新名（X3）而唔覆蓋 X：咁 X 仍然係原始數據，任何 step 都可以獨立重跑。
@@ -193,6 +218,12 @@ score, _, _ = cv_evaluate(ridge, X3, y, X3_test, target="log")
 record("3", "Missing values labelled by meaning; MSSubClass as category", score)
 ```
 同 Step 2 一樣，只係將 X 換成 X3。
+
+跑出嚟會見到：
+
+```text
+Step 3: CV RMSE 0.15106 (-0.00100 vs previous step)
+```
 
 ### 3.3 點睇結果：0.15206 → 0.15106（−0.7%）
 
@@ -265,6 +296,29 @@ score, _, test_log = cv_evaluate(ridge, X4, y, X4_test, target="log")
 record("4", ...)
 save_submission("s2_new_features", test_log)
 ```
+
+**新特徵（頭 3 間屋）**（用真實數據睇吓）：
+
+```text
+   GrLivArea  TotalBsmtSF  TotalSF  FullBath  HalfBath  BsmtFullBath  BsmtHalfBath  TotalBathrooms
+0       1710          856     2566         2         1             1             0             3.5
+1       1262         1262     2524         2         0             0             1             2.5
+2       1786          920     2706         2         1             1             0             3.5
+
+   YrSold  YearBuilt  HouseAge  YearRemodAdd  RemodelAge
+0    2008       2003         5          2003           5
+1    2007       1976        31          1976          31
+2    2008       2001         7          2002           6
+```
+
+驗算第 0 間：TotalSF = 1710 + 856 = 2566；TotalBathrooms = 2 + 0.5×1 + 1 + 0.5×0 = 3.5；HouseAge = 2008 − 2003 = 5。X4 有 84 欄（原本 79 + 5 個新特徵）。
+
+跑出嚟會見到：
+
+```text
+Step 4: CV RMSE 0.15121 (+0.00014 vs previous step)
+saved s2_new_features.csv
+```
 - 喺 Step 3 嘅結果上面再加特徵，所以係**累積**嘅。
 - 今次要 `test_log`，因為要出 submission **S2**。
 
@@ -326,6 +380,34 @@ AREA_COLUMNS = ["LotFrontage", "LotArea", ..., "TotalSF", "TotalPorchSF"]
 skewness = X4[AREA_COLUMNS].skew().sort_values(ascending=False)
 print(skewness.round(2).to_string())
 ```
+
+跑出嚟會見到：
+
+```text
+MiscVal          24.48
+PoolArea         14.83
+LotArea          12.21
+3SsnPorch        10.30
+LowQualFinSF      9.01
+BsmtFinSF2        4.26
+ScreenPorch       4.12
+EnclosedPorch     3.09
+MasVnrArea        2.67
+OpenPorchSF       2.36
+LotFrontage       2.16
+TotalSF           1.78
+BsmtFinSF1        1.69
+WoodDeckSF        1.54
+TotalBsmtSF       1.52
+1stFlrSF          1.38
+GrLivArea         1.37
+TotalPorchSF      1.10
+BsmtUnfSF         0.92
+2ndFlrSF          0.81
+GarageArea        0.18
+```
+
+由上至下 skew 越嚟越細。只有最後一個 GarageArea（0.18）低過 0.75，所以佢唔使取 log。
 - 計每欄嘅 skew，由大到細排。
 - `.round(2)` 取 2 位小數；`.to_string()` 令每行都完整印出，唔會被省略。
 - **印出嚟係俾人睇嘅證據**，報告可以引用：「我哋揀 skew > 0.75 嘅 20 欄」。
@@ -359,6 +441,26 @@ score, _, test_log = cv_evaluate(ridge, X5, y, X5_test, target="log")
 record("5", "log1p of skewed area columns", score)
 save_submission("s3_log_features", test_log)
 ```
+
+**取 log 之前同之後（頭 3 間屋）**（用真實數據睇吓）：
+
+```text
+   GrLivArea 之前  之後   LotArea 之前  之後
+0            1710  7.445          8450  9.042
+1            1262  7.141          9600  9.170
+2            1786  7.488         11250  9.328
+
+取 log 之後 GrLivArea 最大值：8.64
+```
+
+數字變細咗好多，而且大屋同細屋之間嘅差距縮窄咗。留意最大值得 8.64，呢個就係 §6.3 個 bug 嘅原因：「> 4000」喺 log 之後永遠唔會成立。
+
+跑出嚟會見到：
+
+```text
+Step 5: CV RMSE 0.13239 (-0.01882 vs previous step)
+saved s3_log_features.csv
+```
 同之前一樣，套落 train 同 test，評分，出 submission **S3**。
 
 ### 5.3 點睇結果：0.15121 → 0.13239（−12.4%，全個 Part 最大）
@@ -389,6 +491,12 @@ Part 1 §1.5 已經解釋咗呢兩間屋（Id 524、1299）點解係 outlier：�
 ```python
 score, _, test_log = cv_evaluate(ridge, X5, y, X5_test, target="log", drop_outliers=True)
 record("6", "Drop 2 outliers from training folds", score)
+```
+
+跑出嚟會見到：
+
+```text
+Step 6: CV RMSE 0.12766 (-0.00473 vs previous step)
 ```
 - 唯一改變係 `drop_outliers=True`。
 - `cv_evaluate` 入面會用 Part 1 計好嘅 `outlier` mask，喺每個 fold 嘅**訓練行**拎走佢哋（Part 2 筆記有逐行解釋）。
@@ -455,6 +563,19 @@ for alpha in [1, 3, 10, 30, 100]:
 ```python
 best_alpha = min(alpha_scores, key=alpha_scores.get)
 ```
+
+跑出嚟會見到：
+
+```text
+alpha=  1: CV RMSE 0.13027
+alpha=  3: CV RMSE 0.12843
+alpha= 10: CV RMSE 0.12766
+alpha= 30: CV RMSE 0.12797
+alpha=100: CV RMSE 0.12980
+best alpha: 10
+```
+
+（呢幾行係 for 迴圈入面嘅 `print` 同之後嘅 `print("best alpha:", ...)` 印出嚟。）
 - 喺 dict 入面搵「分數最細」嗰個 key。
 - `min(..., key=...)` 嘅意思係用 `alpha_scores.get(alpha)`（即係分數）嚟比較大細，但回傳嘅係 key（alpha）本身。
 - **用例子行一次：**
@@ -468,6 +589,13 @@ ridge = Pipeline([("prep", make_linear_preprocessor()), ("model", Ridge(alpha=be
 score, oof_ridge, test_log = cv_evaluate(ridge, X5, y, X5_test, target="log", drop_outliers=True)
 record("6b", f"Ridge alpha tuned to {best_alpha}", score)
 save_submission("s4_no_outliers", test_log)
+```
+
+跑出嚟會見到：
+
+```text
+Step 6b: CV RMSE 0.12766 (+0.00000 vs previous step)
+saved s4_no_outliers.csv
 ```
 - 用最好嘅 alpha 重新整 ridge，評分、記錄，出 submission **S4**。
 - `oof_ridge` 會留低，Part 5 blend 嗰陣用。
@@ -498,6 +626,21 @@ part3 = results[results.step.isin(["1", "2", "3", "4", "5", "6", "6b"])].copy()
 part3["improvement"] = -part3.cv_rmse.diff()
 part3
 ```
+
+跑出嚟會見到：
+
+```text
+  step                                        description   cv_rmse  improvement
+1    1            Ridge, raw price, minimal preprocessing  0.155335          NaN
+2    2                             Predict log(SalePrice)  0.152063     0.003272
+3    3  Missing values labelled by meaning; MSSubClass...  0.151065     0.000998
+4    4  New features: TotalSF, TotalBathrooms, ages, T...  0.151209    -0.000145
+5    5                       log1p of skewed area columns  0.132386     0.018823
+6    6                Drop 2 outliers from training folds  0.127656     0.004730
+7   6b                            Ridge alpha tuned to 10  0.127656    -0.000000
+```
+
+description 太長嘅會被截短，以 `...` 結尾。
 - `.isin([...])` 會揀出 step 喺清單入面嘅行。
 - `.diff()` 計每行同上一行嘅差（→ Part 0 §3.3）；前面加負號，令「進步」變成正數，睇起嚟直觀啲。
 - **點睇呢張表：**
