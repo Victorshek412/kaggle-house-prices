@@ -4,6 +4,8 @@
 > `make_linear_preprocessor`、`cv_evaluate`、`record`、`save_submission`。
 > 呢度明晒，之後每一步就只係「改一樣嘢，再量一次」。
 
+> **前置知識（唔識就先睇 Part 0）：** function 同預設值 → §1.3；`for` 同 `if` → §1.4、§1.5；numpy array 同 `np.clip`、`np.zeros` → §2；X、y、`fit`、`predict` → §4.1、§4.2；coefficient → §4.3；overfitting → §4.4；hyperparameter → §4.5；Transformer 同 Pipeline → §4.6；RMSE → §4.7。
+
 ---
 
 ## 1. 概念
@@ -144,19 +146,23 @@ def cv_evaluate(model, X, y, X_test, target="log", drop_outliers=False):
     for train_idx, valid_idx in kf.split(X):
 ```
 - 行 5 次，每次 `kf.split` 會俾出兩組**行號**：一組係訓練嘅行，一組係驗證嘅行。
+- 一次拆兩個值落 `train_idx` 同 `valid_idx`（unpacking → Part 0 §1.4）。
+- `X.iloc[train_idx]` 嘅意思係「用位置揀出呢啲行」（→ Part 0 §3.2）。
 
 ```python
         if drop_outliers:
-            keep = ~((X.GrLivArea.values[train_idx] > 4000) & (y[train_idx] < 300000))
-            train_idx = train_idx[keep]
+            train_idx = train_idx[~outlier.values[train_idx]]
 ```
-- 只喺**訓練行**入面拎走 outlier。`~` 係「唔係」。
+- `outlier` 係 Part 1.4 用**原始數據**計出嚟嘅 True/False mask。
+- `outlier.values[train_idx]` 會攞出訓練行各自係咪 outlier；`~` 將 True/False 反轉（→ Part 0 §2.3），即係「唔係 outlier 嘅先留低」。
+- 只喺**訓練行**入面拎走 outlier。
+- **點解唔喺呢度直接寫 `X.GrLivArea > 4000`？** 因為 Part 3 Step 5 會將 GrLivArea 取 log，log 之後最大都係 8.6 左右，「> 4000」就永遠唔會成立。第一版 code 真係中咗呢個伏，Step 6 完全冇效果。詳情見 Part 3 筆記。
 - `valid_idx` 完全冇郁，outlier 照樣要被估、照樣計分。
 
 ```python
         fold_model = clone(model)
 ```
-每輪一個全新 model。
+每輪一個全新 model。`fold_model.fit(...)` 會令 pipeline 逐步學嘢：先學 median 同 scaling，再學 one-hot 類別，最後學 Ridge 嘅 coefficient（→ Part 0 §4.6）。
 
 ```python
         if target == "log":

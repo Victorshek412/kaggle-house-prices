@@ -1,3 +1,9 @@
 step,description,cv_rmse
 0,Predict the mean price,0.40776218644889006
 1,"Ridge, raw price, minimal preprocessing",0.15533537209265155
+2,Predict log(SalePrice),0.15206291632652194
+3,Missing values labelled by meaning; MSSubClass as category,0.1510648928972866
+4,"New features: TotalSF, TotalBathrooms, ages, TotalPorchSF",0.151209409510093
+5,log1p of skewed area columns,0.1323862025275877
+6,Drop 2 outliers from training folds,0.12765587028799458
+6b,Ridge alpha tuned to 10,0.12765587028799458

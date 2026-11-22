@@ -53,8 +53,9 @@ def cv_evaluate(model, X, y, X_test, target="log", drop_outliers=False):
     test_log = np.zeros(len(X_test))
     for train_idx, valid_idx in kf.split(X):
         if drop_outliers:  # remove outliers from the training rows only; validation keeps them
-            keep = ~((X.GrLivArea.values[train_idx] > 4000) & (y[train_idx] < 300000))
-            train_idx = train_idx[keep]
+            # `outlier` comes from Part 1.4 and uses the raw train data, so it still works
+            # after later steps log-transform GrLivArea.
+            train_idx = train_idx[~outlier.values[train_idx]]
         fold_model = clone(model)  # a fresh, untrained copy for every fold
         if target == "log":
             fold_model.fit(X.iloc[train_idx], y_log[train_idx])

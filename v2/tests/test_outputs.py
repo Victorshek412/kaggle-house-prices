@@ -53,3 +53,34 @@ def test_submissions_valid():
         assert len(sub) == 1459, path.name
         assert sub.Id.tolist() == sample.Id.tolist(), path.name
         assert np.isfinite(sub.SalePrice).all() and (sub.SalePrice > 0).all(), path.name
+
+
+def test_feature_steps():
+    steps = read_results().step.tolist()
+    expected = ["2", "3", "4", "5", "6"]
+    assert [s for s in steps if s in expected] == expected
+    for name in ("s2_new_features.csv", "s3_log_features.csv", "s4_no_outliers.csv"):
+        assert (RESULTS / "submissions" / name).is_file(), name
+
+
+def test_feature_functions(monkeypatch):
+    import numpy as np
+    import pandas as pd
+    ns = run_part("part1_eda.py", monkeypatch)
+    for part in ("part2_baseline.py", "part3_features.py"):  # quick: Ridge-only parts
+        exec((V2 / "src" / part).read_text(), ns)
+    rows = ns["train"].iloc[:2].copy()
+    rows["GarageArea"] = [0, 400]
+    rows["GarageType"] = pd.Series([None, None], index=rows.index, dtype=object)
+    filled = ns["fill_missing_meaning"](rows)
+    assert filled.GarageType.iloc[0] == "NoGarage"
+    assert pd.isna(filled.GarageType.iloc[1])  # has a garage, type unknown: leave for the imputer
+    assert filled.MSSubClass.dtype == object
+    added = ns["add_new_features"](filled)
+    assert (added.TotalSF == rows.GrLivArea + rows.TotalBsmtSF).all()
+
+
+def test_outlier_step_changes_score():
+    # Regression: Step 6 once had no effect because GrLivArea was already log-transformed.
+    scores = read_results().set_index("step").cv_rmse
+    assert abs(scores["6"] - scores["5"]) > 1e-6

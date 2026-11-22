@@ -3,6 +3,8 @@
 > EDA 唔係用嚟攞分。佢做嘅係**搵出之後每一步要做咩，同埋點解要咁做**。
 > Part 3 每一個 feature engineering step，都可以喺呢度搵到佢嘅源頭，所以報告講「pathway」嗰陣，EDA 就係起點。
 
+> **前置知識（唔識就先睇 Part 0）：** 變數同 function → §1.1、§1.3；`import` 同 f-string → §1.7；DataFrame 同 Series → §3.1；`.loc` 同 boolean mask → §2.3、§3.2；log 同 skew → §5。
+
 ---
 
 ## 1. 概念
@@ -63,6 +65,7 @@ $$\text{score} = \sqrt{\frac{1}{n}\sum_i \big(\log(\hat y_i) - \log(y_i)\big)^2}
 ```python
 from pathlib import Path
 ```
+（`from … import …` → Part 0 §1.7）
 `Path` 係處理檔案路徑嘅工具。`Path("a") / "b.csv"` 會自動砌成 `a/b.csv`，Windows、Mac、Linux 都通用。
 
 ```python
@@ -82,8 +85,10 @@ CANDIDATES = [Path("/kaggle/input/house-prices-advanced-regression-techniques"),
               Path("house-prices-advanced-regression-techniques")]
 DATA_DIR = next(path for path in CANDIDATES if (path / "train.csv").exists())
 ```
+- `CANDIDATES` 係一個 list（→ Part 0 §1.2），入面放咗 3 個可能嘅位置。
 - 喺 Kaggle 上面，data 固定放喺 `/kaggle/input/...`；喺我嗰邊（本地）就係另一個位置。
 - 呢兩行會逐個位置去搵，邊度搵到 `train.csv` 就用邊個。
+- `path for path in CANDIDATES if (path / "train.csv").exists()`：逐個 `path` 去試（好似一個縮短咗嘅 `for` 迴圈，→ Part 0 §1.4），只保留 `train.csv` 存在嘅位置。
 - `next(...)` 嘅意思係「攞第一個符合條件嘅」。
 - **冇咗會點：** 同一本 notebook 唔可以喺 Kaggle 同本地都跑得到。
 
@@ -93,6 +98,8 @@ OUT_DIR = Path("/kaggle/working") if Path("/kaggle/working").exists() else Path(
 ```
 - Kaggle 只准寫檔案入 `/kaggle/working`，所以 output 要放嗰度。
 - `mkdir` 開 folder。`parents=True` 代表連上層 folder 一齊開；`exist_ok=True` 代表已經有就唔好報錯。
+
+（`def` 定義 function，`return` 交返結果 → Part 0 §1.3。寫成 function 係因為要讀 3 個檔案，設定要完全一樣。）
 
 ```python
 def read_csv(name):
@@ -164,6 +171,7 @@ ABSENT_MEANING = ["PoolQC", "MiscFeature", ...]
 missing = pd.DataFrame({"train": train.drop(columns="SalePrice").isna().sum(),
                         "test": test.isna().sum()})
 ```
+- `{"train": ..., "test": ...}` 係一個 dict（→ Part 0 §1.2）：key 會變成欄名，value 係嗰欄嘅內容。
 - `isna()` 將每一格變成 True（缺失）或者 False。
 - `.sum()` 將每欄嘅 True 數埋，即係每欄缺幾多格。
 - train 同 test 分開兩欄數，方便比較。
@@ -197,6 +205,7 @@ ax.barh(top.index, top.train, color=colors)
 ```python
 outlier = (train.GrLivArea > 4000) & (train.SalePrice < 300000)
 ```
+- 呢行會得出一條 True/False 嘅 Series，叫 boolean mask（→ Part 0 §2.3）：1460 個值，outlier 係 True。
 - 兩個條件同時成立先算 outlier。`&` 係「同埋」；pandas 要用 `&`，唔可以用 `and`，而且每個條件要加括號。
 - **點解唔係只用 `> 4000`？** 因為有兩間大屋賣到 70 幾萬，佢哋完全跟正常規律（大屋貴價），唔應該拎走。
 
@@ -211,7 +220,8 @@ ax.scatter(train.GrLivArea[outlier], train.SalePrice[outlier], s=150,
 ```python
 train.loc[outlier, ["Id", "GrLivArea", "SalePrice", "OverallQual", "SaleCondition"]]
 ```
-- 用 `.loc[邊啲行, 邊啲欄]` 攞出嗰兩間屋嘅資料。
+- 用 `.loc[邊啲行, 邊啲欄]` 攞出嗰兩間屋嘅資料（→ Part 0 §3.2）。
+- **注意：** 呢個 `outlier` 變數之後 Part 2 嘅 `cv_evaluate` 會再用（Step 6 拎走 outlier 嗰陣）。
 - 會見到 `SaleCondition = Partial`，呢個就係拎走佢哋嘅**理由**，唔係淨係因為佢哋「睇落怪」。
 
 ### Cell 6：相關系數
