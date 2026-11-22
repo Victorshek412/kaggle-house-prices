@@ -1,0 +1,13 @@
+<section id="step13">
+<p class="eyebrow">STEP 13</p>
+<h2>Keep the outliers and flag them</h2>
+<div class="split">
+<div class="col">
+<p class="lead">We kept the two houses in training and added one feature, <b>HugePartial</b>: over 4,000 sq ft and a partial sale.</p>
+<p class="lead">Our own check: hold out one outlier, learn from the other, predict it.</p>
+<p class="lead">House 2550: $643k → $260k. Other houses barely moved.</p>
+</div>
+<img class="fig rise" src="/_blob/31cbd046355b4929b2374bd57a912f66" alt="Bar chart: true price, earlier prediction and Step 13 prediction for houses 524 and 1299">
+</div>
+<aside>[Member 1] So in step 13 we kept the two houses in training and added one simple feature that flags huge partial sales. Normal cross-validation could not test this, so we built our own check: hold out one outlier, learn from the other, and predict it. The error dropped from about four times too high to under two times. Our prediction for house 2550 fell from 643 to 260 thousand dollars, and the other houses barely changed.</aside>
+</section>

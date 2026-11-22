@@ -1,0 +1,21 @@
+<section id="models">
+<p class="eyebrow">COMPARING MODELS</p>
+<h2>Boosting won, Random Forest came last</h2>
+<div class="split">
+<table class="models">
+<tr><th>Model</th><th style="text-align:right">CV RMSE</th></tr>
+<tr><td>XGBoost</td><td style="text-align:right">0.1231</td></tr>
+<tr><td>CatBoost</td><td style="text-align:right">0.1232</td></tr>
+<tr><td>SVR</td><td style="text-align:right">0.1235</td></tr>
+<tr><td>Lasso</td><td style="text-align:right">0.1255</td></tr>
+<tr><td>ElasticNet</td><td style="text-align:right">0.1257</td></tr>
+<tr><td>Ridge</td><td style="text-align:right">0.1277</td></tr>
+<tr><td>Random Forest</td><td style="text-align:right">0.1382</td></tr>
+</table>
+<div class="col">
+<img class="fig rise" style="height:500px" src="/_blob/8654a4df840fbc4cc200b0736aa12253" alt="Line chart: Random Forest error stops falling after a few trees, boosting keeps falling to a lower error">
+<p class="caption">Averaging trees stops helping; boosting keeps fixing what is left.</p>
+</div>
+</div>
+<aside>[Member 1] With the features fixed, we compared seven models. The boosting models, XGBoost and CatBoost, were the best at about 0.123, and Random Forest was the worst, even behind Ridge. The chart shows why. Random Forest averages independent trees, so adding more trees soon stops helping. Boosting adds small trees one after another, and each one fixes the error that is still left, so it reaches a lower error.</aside>
+</section>

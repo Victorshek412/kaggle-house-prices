@@ -1,0 +1,13 @@
+<section id="features" class="alt">
+<p class="eyebrow">FEATURE ENGINEERING · QUESTION 1</p>
+<h2>One change per step; the log of area mattered most</h2>
+<div class="split">
+<img class="fig rise" src="/_blob/f84e7e730a91806deb9838d15f8b3c5a" alt="Bar chart of CV RMSE after each feature step, with a large drop at step 5">
+<div class="col">
+<p class="big rise" style="--i:2">−12%</p>
+<p class="lead">Step 5: log of the 20 skewed area features cut the CV error from 0.1512 to 0.1324.</p>
+<p class="lead">Price grows in proportion to size, so on a log scale the relationship becomes a straight line.</p>
+</div>
+</div>
+<aside>[Member 1] Then we improved the features one step at a time with the same Ridge model. Predicting the log price and labelling missing values helped a little. Adding total area and house age did nothing, because a linear model can already add columns together. The big jump was step 5: the log of the skewed area features cut the error by twelve percent. Price grows in proportion to size, so on a log scale the relationship is a straight line. This is our answer to the first question.</aside>
+</section>

@@ -1,0 +1,13 @@
+<section id="validation">
+<p class="eyebrow">HOW WE MEASURE</p>
+<h2>Same five folds for every step, no leakage</h2>
+<div class="split">
+<ul class="points">
+<li>Each fold of 292 houses is predicted by a model trained on the other 1,168.</li>
+<li>Median filling, scaling and one-hot encoding are refitted inside every fold.</li>
+<li>Baselines: average price 0.408, simple Ridge 0.155.</li>
+</ul>
+<img class="fig rise" src="/_blob/2ad3e5cdfcc922e1503291f8504738f8" alt="Grid showing which of five folds validates each of the first 20 houses">
+</div>
+<aside>[Member 1] Thanks. To compare ideas fairly, we use five-fold cross-validation. Each fold of 292 houses is predicted by a model trained on the other 1,168, so every house is predicted once by a model that never saw it. To avoid data leakage, the median filling, scaling and one-hot encoding are refitted inside every fold. Predicting the average price gives an error of 0.408, and a simple Ridge regression gives 0.155.</aside>
+</section>

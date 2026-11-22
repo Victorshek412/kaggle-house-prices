@@ -1,0 +1,13 @@
+<section id="analysis" class="alt">
+<p class="eyebrow">ERROR ANALYSIS</p>
+<h2>A blind spot in our cross-validation</h2>
+<div class="split">
+<ul class="points">
+<li>The two outliers make up 17% of our squared error.</li>
+<li>Both sit in the same fold, so CV never learns from one to predict the other.</li>
+<li>Test house 2550 is the same kind of sale: our models priced it at $565k to $891k.</li>
+</ul>
+<img class="fig rise" src="/_blob/6336b4319f35d96a83e2025580b9018a" alt="Bar chart of predictions for test house 2550 by submission, far above the prices of its two look-alikes">
+</div>
+<aside>[Member 1] We found a blind spot. The two outliers from our data exploration make up seventeen percent of our squared error, and both fall into the same fold, so our CV never learned from one while predicting the other. The test set has a third house of the same kind, house 2550. Because we had removed its look-alikes from training, our models priced it far above the 160 to 185 thousand dollars its look-alikes sold for.</aside>
+</section>

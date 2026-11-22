@@ -1,0 +1,10 @@
+<section id="eda" style="gap:32px">
+<p class="eyebrow">EXPLORING THE DATA</p>
+<h2>Three things the data told us</h2>
+<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:40px">
+<div class="col rise" style="--i:1; gap:16px"><img class="fig-third" src="/_blob/8d71e66947416267fa9faa7ccf6e314c" alt="SalePrice histogram before and after a log transform"><p class="caption">Price is skewed (1.88); the log is not (0.12)</p></div>
+<div class="col rise" style="--i:2; gap:16px"><img class="fig-third" src="/_blob/3a9fab2e7d8f454180883ebe9c6b12b5" alt="Bar chart of features with the most missing values"><p class="caption">NA often means “has none”, not “unknown”</p></div>
+<div class="col rise" style="--i:3; gap:16px"><img class="fig-third" src="/_blob/75329bd2837cec8a360fd4afabe457ee" alt="Scatter plot of living area against price with two outliers circled"><p class="caption">Two huge houses sold cheaply (Ids 524, 1299)</p></div>
+</div>
+<aside>[Member 2] First, the price is skewed. Its skewness is 1.88, and after a log transform it is 0.12, so we predict the log price. Second, missing values have two meanings: for pool quality, NA means the house has no pool, but for lot frontage it means the value was not recorded. Third, two very large houses sold for less than 300,000 dollars. Both were partial sales of unfinished homes, and they come back later in our story. Now [Member 1] will explain our method.</aside>
+</section>
