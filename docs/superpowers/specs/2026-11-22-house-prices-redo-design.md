@@ -1,5 +1,7 @@
 # House Prices 重做：設計文件
 
+狀態：學生已於 2026-11-22 approve（加入 XGBoost、SVR）。
+
 日期：2026-11-22 ・ 截止：2026-11-29（星期日）23:59
 
 ## 1. 目的同原因
@@ -99,13 +101,15 @@ Claude 的決定：用 `git mv`，舊方案嘅歷史唔會唔見；root 只留 R
 | | 6 | 拎走 outlier：GrLivArea > 4000 而且 SalePrice < 300000。只喺 training fold 入面拎走，validation 照計分 | ✓ S4 |
 | 4 Model 比較 | 7 | Ridge / Lasso / ElasticNet，用 CV 試一小組 alpha | |
 | | 8 | Random Forest（課堂學過，做過渡） | |
-| | 9 | CatBoost，直接處理類別欄，唔使 one-hot | ✓ S5 |
-| 5 Blend | 10 | 最好嘅線性 model 同 CatBoost 各佔 50% 平均。用固定權重，避免喺 CV 上 overfit 個權重 | ✓ S6（最終） |
+| | 9 | XGBoost（one-hot 後嘅數據），同 Random Forest 對比：boosting 對 bagging | |
+| | 10 | CatBoost，直接處理類別欄，唔使 one-hot | ✓ S5 |
+| | 11 | SVR（RBF kernel，要標準化），一種同線性 model 同樹 model 都唔同嘅思路 | |
+| 5 Blend | 12 | 先用 out-of-fold 預測睇下各 model 嘅錯誤有幾相關，再揀 2–4 個互補嘅 model 平均。用等權重或者簡單固定權重，唔喺 CV 上細調，避免 overfit | ✓ S6（最終） |
 
 **同舊方案唔同嘅地方**（Claude 的決定，學生已經睇過）
 - Step 2（log target）獨立成一步，等效果睇得到。
 - 加入 Random Forest 做過渡。
-- 唔做 XGBoost 同 SVR，控制範圍。
+- 學生 approve 時要求加返 XGBoost 同 SVR（想 ranking 高啲），所以 Part 4 有 6 種 model；blend 由 OOF 相關性揀互補嘅組合。
 
 **Step 1 嘅陷阱**：用原始價錢訓練嘅 Ridge 可能估出負數，計 log RMSE 之前要設一個正數下限（clip）。呢個陷阱本身就係講 Step 2 嘅好材料。
 
