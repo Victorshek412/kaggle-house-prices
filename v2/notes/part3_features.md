@@ -89,7 +89,9 @@ record("2", "Predict log(SalePrice)", score)
 
 **進步細過預期，點解？** 因為 X 入面嘅面積仍然係原數，而**樓價同面積嘅真實關係係「按比例」**：大一倍嘅屋大約貴一倍，唔係貴一個固定金額。用數學寫出嚟：
 
-$$\text{價錢} \approx c \times \text{面積} \quad\Rightarrow\quad \log(\text{價錢}) \approx \log c + \log(\text{面積})$$
+```
+價錢 ≈ c × 面積    ⇒    log(價錢) ≈ log(c) + log(面積)
+```
 
 - 即係話，**「log 價錢」同「log 面積」之間先係一條直線**。
 - Step 2 只係將一邊（價錢）取 log，另一邊（面積）仲係原數，所以條線仲係唔夠直。
@@ -263,9 +265,11 @@ save_submission("s2_new_features", test_log)
 
 **呢個唔係失敗，而係一個好嘅發現。** 原因係 Ridge 係線性 model（→ Part 0 §4.3）：
 
-$$\hat y = \dots + b_1 \times \text{GrLivArea} + b_2 \times \text{TotalBsmtSF} + \dots$$
+```
+估計 = … + b1 × GrLivArea + b2 × TotalBsmtSF + …
+```
 
-如果 $b_1 = b_2$，效果就等於 $b_1 \times \text{TotalSF}$。即係話，**Ridge 本身已經可以自己「加埋」兩欄**，TotalSF 對佢嚟講冇新資訊。HouseAge 同理：佢等於 YrSold − YearBuilt，兩欄都已經喺 X 入面。
+如果 `b1 = b2`，效果就等於 `b1 × TotalSF`。即係話，**Ridge 本身已經可以自己「加埋」兩欄**，TotalSF 對佢嚟講冇新資訊。HouseAge 同理：佢等於 YrSold − YearBuilt，兩欄都已經喺 X 入面。
 
 **咁點解仲要做？** 有兩個原因：
 1. **Step 5 會用到。** log(TotalSF) ≠ log(GrLivArea) + log(TotalBsmtSF)。取 log 之後，總面積就變成一個 Ridge 自己砌唔出嚟嘅新資訊。

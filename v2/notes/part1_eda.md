@@ -17,7 +17,9 @@
 
 ### 1.2 Kaggle 點樣計分：log RMSE
 
-$$\text{score} = \sqrt{\frac{1}{n}\sum_i \big(\log(\hat y_i) - \log(y_i)\big)^2}$$
+```
+score = √( 平均( (log(估計價錢) − log(真實價錢))² ) )
+```
 
 直覺上，log 嘅差其實係**百分比誤差**：
 
