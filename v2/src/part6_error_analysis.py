@@ -230,3 +230,6 @@ summary.round(5)
 #   beat the Step 13 blend on CV.
 # - **Honest caveat:** Step 13 was prompted by the leaderboard. We made exactly one extra
 #   submission (S7) to check it, rather than trying many variants against the leaderboard.
+# - **Result:** S7 scored **0.11624** on Kaggle, our best: S6 scored 0.12037 and the first
+#   attempt 0.11745. S6 and S7 differ almost only in their prediction for Id 2550, so this is
+#   consistent with that house selling at a price close to its two training look-alikes.

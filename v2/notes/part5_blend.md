@@ -51,6 +51,33 @@ A 估高、B 估低，平均之後兩邊互相抵消，所以比兩個都準。
 
 > 呢個就係 **diversity（多樣性）** 嘅概念：ensemble 嘅成員要「各有所長、各有所短」。成班一模一樣嘅專家，等於得一個專家。
 
+**用 4 間屋證明「錯得唔同」先有用：**
+
+```python
+true = np.array([12.0, 11.5, 12.3, 11.8])
+a = true + np.array([0.10, -0.05, 0.08, -0.02])   # model A 嘅錯
+b = true + np.array([0.09, -0.04, 0.07, -0.03])   # model B：錯法同 A 差唔多
+c = true + np.array([-0.08, 0.06, -0.05, 0.03])   # model C：錯法同 A 相反
+rmse = lambda prediction: np.sqrt(np.mean((true - prediction) ** 2))
+print(f"A alone:  RMSE {rmse(a):.3f}")
+for name, other in [("B", b), ("C", c)]:
+    correlation = np.corrcoef(true - a, true - other)[0, 1]
+    print(f"A + {name}: residual correlation {correlation:+.2f}, blend RMSE {rmse((a + other) / 2):.3f}")
+```
+
+跑出嚟會見到：
+
+```text
+A alone:  RMSE 0.069
+A + B: residual correlation +0.99, blend RMSE 0.066
+A + C: residual correlation -1.00, blend RMSE 0.010
+```
+
+**點睇：**
+- A 同 B 錯法差唔多（correlation 接近 +1），平均之後誤差幾乎冇改善。
+- A 同 C 錯法相反（correlation 係負數），平均之後誤差大幅跌，因為一個估高、一個估低，互相抵消。
+- 所以揀 blend 成員，唔係揀「最好嘅幾個」，而係揀「好、而且錯法唔同」嘅幾個。
+
 ### 1.3 點解唔調權重（例如 XGBoost 40%、Lasso 20%……）
 
 調權重好似好合理，但有一個陷阱：
@@ -148,6 +175,22 @@ blend_oof = np.mean([oof[name] for name in blend_names], axis=0)
 - `[oof[name] for name in blend_names]`：攞出 4 個 model 嘅 OOF 預測，組成一個 list，入面有 4 個 array，每個 1460 個數。
 - `np.mean(..., axis=0)`：沿住「model」嗰個方向平均。即係每間屋都將 4 個預測加埋除 4，結果係 1460 個數。
   - `axis=0` 嘅意思：將 4 個 array 疊成一個 4×1460 嘅表，然後**直向**平均每一欄。
+
+**用 2 個 model、3 間屋睇 `axis=0`：**
+
+```python
+predictions = [np.array([12.1, 11.8, 12.5]),   # model A 對 3 間屋嘅預測
+               np.array([11.9, 11.9, 12.3])]   # model B 對同樣 3 間屋嘅預測
+print(np.mean(predictions, axis=0))
+```
+
+跑出嚟會見到：
+
+```text
+[12.   11.85 12.4 ]
+```
+
+**點睇：** 每間屋都係兩個預測嘅平均：(12.1 + 11.9) / 2 = 12.0、(11.8 + 11.9) / 2 = 11.85、(12.5 + 12.3) / 2 = 12.4。`axis=0` 就係「沿住 model 嗰個方向平均」，即係「直向」平均。
 
 ```python
 blend_test = np.mean([test_preds[name] for name in blend_names], axis=0)

@@ -140,6 +140,30 @@ ElasticNet:  兩樣都有，用 l1_ratio 決定比例
 
 **用數字講：** 將一個係數由 0.1 壓到 0，Lasso 可以慳返 0.1 嘅懲罰，Ridge 只可以慳返 0.01。所以對 Lasso 嚟講，將細係數壓到 0 好值得；對 Ridge 嚟講就唔值得，佢寧願保留少少。
 
+**用真數據證明「Lasso 會將冇用嘅特徵變 0」：**
+
+```python
+from sklearn.linear_model import Ridge, Lasso
+from sklearn.preprocessing import StandardScaler
+demo = train[["OverallQual", "GrLivArea"]].copy()
+demo["Noise"] = np.random.default_rng(0).normal(size=len(demo))   # 一欄完全冇用嘅亂數
+Z = StandardScaler().fit_transform(demo)
+log_price = np.log(train["SalePrice"])
+print("columns:", demo.columns.tolist())
+print("Ridge coefficients:", Ridge(alpha=10).fit(Z, log_price).coef_.round(4))
+print("Lasso coefficients:", Lasso(alpha=0.01).fit(Z, log_price).coef_.round(4))
+```
+
+跑出嚟會見到：
+
+```text
+columns: ['OverallQual', 'GrLivArea', 'Noise']
+Ridge coefficients: [ 0.2454  0.1334 -0.0036]
+Lasso coefficients: [ 0.241  0.127 -0.   ]
+```
+
+**點睇：** 我哋特登加咗一欄「Noise」（亂數，同樓價完全無關）。Ridge 仍然俾佢一個好細、但唔係 0 嘅係數；Lasso 就直接將佢設做 **0**，即係完全唔用。兩個 model 對有用嘅欄（質素、面積）都俾正數係數。
+
 **ElasticNet：** 兩種 penalty 混合。`l1_ratio=0.5` 即係一半一半。當有幾個高度相關嘅特徵（例如 GarageCars 同 GarageArea），Lasso 通常會隨機揀一個、放棄其他；ElasticNet 傾向保留成組。
 
 **點解 alpha 咁細（0.0005，而 Ridge 係 10）？** sklearn 寫 Lasso 公式嘅方式唔同：佢將誤差部份除咗「2 × 訓練行數」（每個 fold 大約 2 × 1166），Ridge 就冇除。所以同一個 alpha 數值嘅意義完全唔同，**兩者唔可以直接比較**。
@@ -248,6 +272,36 @@ Step 8–10 都係由決策樹砌成，所以先講清楚一棵樹係點運作�
 - 最底嗰層叫**葉（leaf）**，估價就係**嗰堆訓練屋嘅平均價**。
 - **點樣揀問題？** 每一步試晒所有欄、所有切點，揀「分完之後兩堆屋各自嘅價錢最一致」嗰個。
 
+**用真數據種一棵兩層嘅樹，睇佢問咗咩問題：**
+
+```python
+from sklearn.tree import DecisionTreeRegressor, export_text
+tree = DecisionTreeRegressor(max_depth=2).fit(train[["OverallQual", "GrLivArea"]], np.log(train["SalePrice"]))
+print(export_text(tree, feature_names=["OverallQual", "GrLivArea"]))
+```
+
+跑出嚟會見到：
+
+```text
+|--- OverallQual <= 6.50
+|   |--- GrLivArea <= 1378.50
+|   |   |--- value: [11.70]
+|   |--- GrLivArea >  1378.50
+|   |   |--- value: [11.99]
+|--- OverallQual >  6.50
+|   |--- OverallQual <= 7.50
+|   |   |--- value: [12.22]
+|   |--- OverallQual >  7.50
+|   |   |--- value: [12.59]
+```
+
+**點睇：**
+- 第一條問題係「OverallQual <= 6.5？」：棵樹自己揀咗質素做最重要嘅分界。
+- 質素低（≤ 6.5）嗰邊，再問面積：「GrLivArea <= 1378.5？」。
+- 質素高嗰邊，再問多一次質素：「OverallQual <= 7.5？」。
+- 4 個 `value` 係 4 片葉，即係嗰堆屋嘅平均 log 價錢。例如最平嗰片 11.70 → e^11.70 大約 12.1 萬；最貴嗰片 12.59 → 大約 29.4 萬。
+- 所以呢棵樹只會俾出 **4 個唔同嘅價錢**，即係階梯形（見下表「估價係階梯形」）。
+
 ### 3.2 樹嘅特性（同線性 model 好唔同）
 
 | 特性 | 解釋 | 後果 |
@@ -273,6 +327,30 @@ Step 8–10 都係由決策樹砌成，所以先講清楚一棵樹係點運作�
 3. **Aggregating：** 300 棵樹各自估價，然後取**平均**。
 
 **點解平均會好啲？** 每棵樹都 overfit，但每棵 overfit 嘅方向唔同（因為數據同欄都係隨機嘅），平均之後，隨機錯誤就互相抵消。呢個就係**減低 variance**。
+
+**用真數據睇「多啲樹平均」嘅效果：**
+
+```python
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+cols = ["OverallQual", "GrLivArea", "TotalBsmtSF", "YearBuilt", "GarageCars"]
+X_tr, X_va, y_tr, y_va = train_test_split(train[cols].fillna(0), np.log(train["SalePrice"]),
+                                          test_size=0.2, random_state=0)
+for n_trees in (1, 10, 100):
+    forest = RandomForestRegressor(n_estimators=n_trees, random_state=0).fit(X_tr, y_tr)
+    error = np.sqrt(np.mean((y_va - forest.predict(X_va)) ** 2))
+    print(f"{n_trees:>3} trees: validation RMSE {error:.4f}")
+```
+
+跑出嚟會見到：
+
+```text
+  1 trees: validation RMSE 0.2042
+ 10 trees: validation RMSE 0.1609
+100 trees: validation RMSE 0.1564
+```
+
+**點睇：** 用 5 個特徵做個細實驗（80% 學、20% 驗證）。得 1 棵樹時誤差最大；10 棵、100 棵平均之後，誤差明顯細咗。呢個就係「平均抵消隨機錯誤」。
 
 類比：問 300 個人估一隻牛有幾重，每個人都可能估錯好多，但 300 個人嘅平均通常好準，前提係佢哋係**獨立**咁估。
 
@@ -337,6 +415,35 @@ XGBoost 全名係 eXtreme **Gradient Boosting**，CatBoost 都係 gradient boost
 ```
 
 **Learning rate（學習率）0.03：** 每棵樹只係加佢估計嘅 3%，咁樣每一步都好細，由好多棵細樹慢慢一齊修正。點解唔一次過全加？因為每棵樹都有雜訊，一次加晒好容易 overfit；細步行可以令雜訊互相抵消。代價係要好多棵樹，所以係 1500 棵。
+
+**用真數據睇 boosting 逐棵樹改錯：**
+
+```python
+from sklearn.ensemble import GradientBoostingRegressor
+booster = GradientBoostingRegressor(n_estimators=500, learning_rate=0.03, max_depth=3,
+                                    random_state=0).fit(X_tr, y_tr)
+for n, prediction in enumerate(booster.staged_predict(X_va), start=1):
+    if n in (1, 10, 50, 100, 300, 500):
+        print(f"after {n:>3} trees: validation RMSE {np.sqrt(np.mean((y_va - prediction) ** 2)):.4f}")
+```
+
+跑出嚟會見到：
+
+```text
+after   1 trees: validation RMSE 0.3799
+after  10 trees: validation RMSE 0.3125
+after  50 trees: validation RMSE 0.1787
+after 100 trees: validation RMSE 0.1476
+after 300 trees: validation RMSE 0.1490
+after 500 trees: validation RMSE 0.1501
+```
+
+**點睇：**
+- 同上面一樣嘅數據。`staged_predict` 會俾出「加完第 n 棵樹之後」嘅預測。
+- 得 1 棵細樹時好差（0.38），因為 learning rate 0.03，每棵只加 3%。
+- 之後每加一批樹，誤差就跌：10 棵 0.31、50 棵 0.18、100 棵 0.148，好似逐次改錯簿咁慢慢改好。
+- **但 100 棵之後反而升返少少**（300 棵 0.149、500 棵 0.150）：樹太多，開始連訓練數據嘅雜訊都學埋，即係 overfit。所以「種幾多棵樹」本身都係一個 hyperparameter。
+- 點解 notebook 用 1500 棵？因為嗰度有 300 幾個特徵，而且用 `subsample`、`colsample_bytree` 每棵樹只睇部份數據，overfit 嚟得慢好多。呢個細實驗只有 5 個特徵，好快就學完。
 
 **點解 boosting 喺呢度贏？** 佢逐步修正系統性嘅錯誤（bias），包括樹天生嘅「階梯」問題：好多棵細樹加埋，可以砌出接近平滑嘅曲線。
 

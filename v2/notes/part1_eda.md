@@ -131,6 +131,31 @@ def read_csv(name):
 - `na_values=["NA", ""]` 就話佢知，只有 `NA` 同空格先算缺失。
 - **冇咗會點：** 864 個真實資料會被當成「唔知」，間接整壞 model。
 
+**親眼比較兩種讀法：**
+
+```python
+default = pd.read_csv("../house-prices-advanced-regression-techniques/train.csv")   # pandas 預設讀法
+print("pandas default: MasVnrType missing =", default["MasVnrType"].isna().sum())
+print("our way:        MasVnrType missing =", train["MasVnrType"].isna().sum())
+train["MasVnrType"].value_counts(dropna=False)
+```
+
+跑出嚟會見到：
+
+```text
+pandas default: MasVnrType missing = 872
+our way:        MasVnrType missing = 8
+MasVnrType
+None       864
+BrkFace    445
+Stone      128
+BrkCmn      15
+NaN          8
+Name: count, dtype: int64
+```
+
+**點睇：** 預設讀法會話有 872 間屋「唔知」外牆類型；我哋嘅讀法只有 8 間真係唔知，其餘 864 間其實係「None（冇石材外牆）」。`value_counts(dropna=False)` 嘅 `dropna=False` 即係連 NaN 都一齊數。
+
 ```python
 train = read_csv("train.csv")
 test = read_csv("test.csv")
@@ -225,14 +250,43 @@ missing = pd.DataFrame({"train": train.drop(columns="SalePrice").isna().sum(),
 - `.sum()` 將每欄嘅 True 數埋，即係每欄缺幾多格。
 - train 同 test 分開兩欄數，方便比較。
 
-**先搞清楚 `missing` 係一張咩表：** `train.isna().sum()` 嘅結果係一條 Series，佢嘅**行名（index）係 train 嘅欄名**，值係嗰欄缺幾多格（→ Part 0 §3.1）。所以 `missing` 每一行代表 train 嘅**一個欄**，例如：
+**先搞清楚 `missing` 係一張咩表：** `train.isna().sum()` 嘅結果係一條 Series，佢嘅**行名（index）係 train 嘅欄名**，值係嗰欄缺幾多格（→ Part 0 §3.1）。逐步睇：
 
+```python
+step1 = train.drop(columns="SalePrice").isna().sum()
+print(step1.shape)
+step1.head(4)
 ```
-              train  test
-PoolQC         1453  1456
-LotFrontage     259   227
-Street            0     0
+
+跑出嚟會見到：
+
+```text
+(80,)
+Id               0
+MSSubClass       0
+MSZoning         0
+LotFrontage    259
+dtype: int64
 ```
+
+**點睇：** 第一步得出一條有 80 個值嘅 Series：每個欄一個數，即係嗰欄缺幾多格。頭 4 個：Id、MSSubClass、MSZoning 冇缺，LotFrontage 缺 259。
+
+```python
+missing = pd.DataFrame({"train": train.drop(columns="SalePrice").isna().sum(),
+                        "test": test.isna().sum()})
+missing.loc[["PoolQC", "LotFrontage", "Street"]]
+```
+
+跑出嚟會見到：
+
+```text
+             train  test
+PoolQC        1453  1456
+LotFrontage    259   227
+Street           0     0
+```
+
+**點睇：** 兩條 Series 並排，變成一張表：每一行代表 train 嘅**一個欄**，train 欄係 train 缺幾多，test 欄係 test 缺幾多。Street 兩邊都係 0，所以下一步會被過濾走。
 
 `missing.index` 就係呢啲欄名（"PoolQC"、"LotFrontage"……）。
 
@@ -355,6 +409,52 @@ correlations = (train.select_dtypes("number").drop(columns="Id")
 4. `["SalePrice"]`：只攞 SalePrice 嗰一**欄**，即係「每個欄同 SalePrice 嘅相關」；
 5. 拎走 SalePrice 自己（自己同自己一定係 1）；
 6. 由細到大排好。
+
+**逐步睇住佢變：**
+
+```python
+numeric = train.select_dtypes("number").drop(columns="Id")
+print("step 1-2, numeric columns only:", numeric.shape)
+corr_table = numeric.corr()
+print("step 3, correlation table:", corr_table.shape)
+corr_table.iloc[:3, :3].round(2)
+```
+
+跑出嚟會見到：
+
+```text
+step 1-2, numeric columns only: (1460, 37)
+step 3, correlation table: (37, 37)
+             MSSubClass  LotFrontage  LotArea
+MSSubClass         1.00        -0.39    -0.14
+LotFrontage       -0.39         1.00     0.43
+LotArea           -0.14         0.43     1.00
+```
+
+**點睇：** 剩低 37 個數字欄；`.corr()` 計出一張 37 × 37 嘅大表，每一格係兩個欄之間嘅相關。呢度只顯示左上角 3 × 3：對角線一定係 1（自己同自己）。
+
+```python
+correlations = corr_table["SalePrice"].drop("SalePrice").sort_values()
+print("step 4-6:", correlations.shape)
+print(correlations.head(3).round(3))
+print(correlations.tail(3).round(3))
+```
+
+跑出嚟會見到：
+
+```text
+step 4-6: (36,)
+KitchenAbvGr    -0.136
+EnclosedPorch   -0.129
+MSSubClass      -0.084
+Name: SalePrice, dtype: float64
+GarageCars     0.640
+GrLivArea      0.709
+OverallQual    0.791
+Name: SalePrice, dtype: float64
+```
+
+**點睇：** 攞出 SalePrice 嗰一欄、拎走佢自己，剩低 36 個數，再由細到大排。最細（`head`）嘅係負相關：數值越大、樓價略低；最大（`tail`）嘅就係同樓價最一齊升嘅三個欄。
 
 ```python
 top10 = correlations.tail(10)

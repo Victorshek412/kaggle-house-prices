@@ -36,6 +36,42 @@ Baseline 係一個「最笨嘅答案」，俾你知「乜都唔做」會得幾�
 
 **點解唔直接用 train 計分？** model 已經見過答案，好似考試前睇咗試卷，分數一定好過真實水平。
 
+**用 10 間屋睇清楚 5-fold 點切：**
+
+```python
+houses = np.arange(10)                    # 10 間屋，編號 0 至 9
+kf_demo = KFold(n_splits=5, shuffle=True, random_state=42)
+for fold, (train_idx, valid_idx) in enumerate(kf_demo.split(houses), start=1):
+    print(f"fold {fold}: learn from {train_idx.tolist()}  ->  predict {valid_idx.tolist()}")
+```
+
+跑出嚟會見到：
+
+```text
+fold 1: learn from [0, 2, 3, 4, 5, 6, 7, 9]  ->  predict [1, 8]
+fold 2: learn from [1, 2, 3, 4, 6, 7, 8, 9]  ->  predict [0, 5]
+fold 3: learn from [0, 1, 3, 4, 5, 6, 8, 9]  ->  predict [2, 7]
+fold 4: learn from [0, 1, 2, 3, 5, 6, 7, 8]  ->  predict [4, 9]
+fold 5: learn from [0, 1, 2, 4, 5, 7, 8, 9]  ->  predict [3, 6]
+```
+
+**點睇：** 每一輪用 8 間屋學、估另外 2 間。5 輪之後，0 至 9 每一間都**啱啱好被估過一次**，而且估佢嗰陣，佢唔喺學習嗰 8 間入面。好似輪流做考官：每個人都會考一次，但考自己嗰次唔可以睇答案。
+
+```python
+oof = np.zeros(10)
+for fold, (train_idx, valid_idx) in enumerate(kf_demo.split(houses), start=1):
+    oof[valid_idx] = fold                 # 用 fold 編號代替「預測」，睇下邊格由邊輪填
+print(oof)
+```
+
+跑出嚟會見到：
+
+```text
+[2. 1. 3. 5. 4. 2. 5. 3. 1. 4.]
+```
+
+**點睇：** 呢個就係 `cv_evaluate` 入面 `oof_log[valid_idx] = ...` 做緊嘅嘢：每一輪只填佢負責嗰兩格，5 輪之後 10 格全部填滿，冇一格漏、冇一格重複。真正嘅 notebook 填嘅係預測價錢，唔係 fold 編號。
+
 **點解每一步都要用同一個切法（`random_state=42`）？** 唔同切法本身就會令分數有少少差異。用同一個切法，兩個 step 之間嘅分別先可以肯定係嚟自你改嘅嘢，而唔係運氣。
 
 ### 1.3 Data leakage（數據洩漏）
@@ -52,6 +88,24 @@ Baseline 係一個「最笨嘅答案」，俾你知「乜都唔做」會得幾�
 
 **解決方法：** 將預處理同 model 一齊放入 `Pipeline`。每個 fold fit 嗰陣，佢只會從嗰個 fold 嘅訓練數據學。
 
+**用真數據睇 leakage 係咩：**
+
+```python
+lot = train["LotFrontage"]
+train_idx, valid_idx = next(KFold(n_splits=5, shuffle=True, random_state=42).split(lot))
+print("median from all 1460 houses:          ", lot.median())
+print("median from the fold's 1168 train rows:", lot.iloc[train_idx].median())
+```
+
+跑出嚟會見到：
+
+```text
+median from all 1460 houses:           69.0
+median from the fold's 1168 train rows: 70.0
+```
+
+**點睇：** 兩個 median 唔同：用全部屋計，有份計嘅包括咗驗證嗰 292 間。即係驗證屋嘅資料「漏」咗入訓練用嘅數字度，呢個就係 leakage。差距今次好細，但原則好重要；有時差距會大到令 CV 分數明顯虛高。
+
 > 一句講晒：**任何「睇成欄數據先做到」嘅步驟，都要放入 Pipeline。**
 
 ### 1.4 預處理三件事
@@ -64,6 +118,32 @@ Baseline 係一個「最笨嘅答案」，俾你知「乜都唔做」會得幾�
    - Ridge 嘅 penalty 罰嘅係「係數²」，所以睡房嘅大係數會被罰到幾乎用唔到，只係因為佢嘅單位（間）細，唔係因為佢唔重要。
    - 標準化之後，兩欄都喺同一把尺上，係數大細先反映真正嘅重要性，penalty 先公平。
 3. **One-hot encoding**：model 只識數字，所以要將文字欄轉做 0/1 欄。例如 `Street = Pave / Grvl` 會變成 `Street_Pave` 同 `Street_Grvl` 兩欄。79 欄做完之後大約變成 **300 欄**（36 個數字欄 + 大約 268 個 one-hot 欄）。去到 Part 4 會變成 324 欄，因為 Part 3 加咗新特徵、`MSSubClass` 變咗類別、多咗 NoGarage 呢類標籤。
+
+**用真數據睇預處理做咗咩：**
+
+```python
+X_demo = train.drop(columns=["Id", "SalePrice"])
+prep = make_linear_preprocessor()
+matrix = prep.fit_transform(X_demo)
+print("before:", X_demo.shape, "  after:", matrix.shape)
+names = prep.get_feature_names_out()
+print([n for n in names if "Street" in n])
+column = list(names).index("num__GrLivArea")
+print("house 0 GrLivArea:", X_demo["GrLivArea"].iloc[0], "->", round(matrix[0, column], 3))
+```
+
+跑出嚟會見到：
+
+```text
+before: (1460, 79)   after: (1460, 304)
+['cat__Street_Grvl', 'cat__Street_Pave']
+house 0 GrLivArea: 1710 -> 0.37
+```
+
+**點睇：**
+- 79 欄變成 304 欄：文字欄被 one-hot 拆開。
+- 例如 Street 變成兩欄：`cat__Street_Grvl` 同 `cat__Street_Pave`（`cat__` 代表嚟自文字欄嗰條流水線）。
+- 第 0 間屋嘅居住面積 1710 呎，標準化之後變成大約 0.37，即係「比平均大少少」（→ Part 0 §4.6）。
 
 ### 1.5 Ridge regression
 
@@ -264,6 +344,28 @@ def record(step, description, cv_rmse):
     results.to_csv(OUT_DIR / "cv_results.csv", index=False)
 ```
 每次都存檔。最後畫「進步樓梯」圖同寫報告，都係用呢個檔案。`index=False` 即係唔好將行號寫入檔案。
+
+**試吓用 `record`，包括「重跑同一步」：**
+
+```python
+record("0", "Predict the mean price", 0.408)
+record("1", "Ridge, raw price", 0.155)
+record("1", "Ridge, raw price (cell run again)", 0.155)
+results
+```
+
+跑出嚟會見到：
+
+```text
+Step 0: CV RMSE 0.40800
+Step 1: CV RMSE 0.15500 (-0.25300 vs previous step)
+Step 1: CV RMSE 0.15500 (-0.25300 vs previous step)
+  step                        description  cv_rmse
+0    0             Predict the mean price    0.408
+1    1  Ridge, raw price (cell run again)    0.155
+```
+
+**點睇：** 頭兩次各加一行。第三次 step 1 已經存在，所以佢**覆蓋**咗舊嗰行，而唔係加多一行；張表仍然係 2 行。呢個就係為咗你喺 Kaggle 重跑某一格都唔會亂。
 
 ```python
 def save_submission(name, test_log):

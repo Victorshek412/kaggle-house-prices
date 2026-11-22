@@ -436,6 +436,24 @@ tried["stacking: weights learned from OOF predictions"] = rmse(stacked)
 ```
 - **Stacking：** 唔用等權重，改為用一個 model 去「學」每個 model 應該佔幾多。
 - `np.column_stack(...)`：將 4 個 model 嘅 OOF 預測並排，砌成一張 1460 × 4 嘅表。每行一間屋，每欄一個 model 嘅預測。
+
+  用 2 個 model、3 間屋睇：
+
+```python
+lasso_prediction = np.array([12.1, 11.8, 12.5])
+xgb_prediction = np.array([12.0, 11.9, 12.4])
+np.column_stack([lasso_prediction, xgb_prediction])
+```
+
+跑出嚟會見到：
+
+```text
+array([[12.1, 12. ],
+       [11.8, 11.9],
+       [12.5, 12.4]])
+```
+
+  每一行係一間屋，左邊係 Lasso 嘅預測，右邊係 XGBoost 嘅。Stacking 就係要學「左邊乘幾多 + 右邊乘幾多」最準。
 - `LinearRegression(positive=True)`：用線性回歸學 4 個權重，`positive=True` 規定權重唔可以係負數。
 - **點解要用 `cross_val_predict` 同另一個 random_state（7）？** 如果用全部 1460 間學權重、再喺同一批屋度評分，就係 Part 5 講過嘅「自己改自己份卷」，分數會虛高。`cross_val_predict` 會再做一次 5-fold：每次用 4 份學權重，去估第 5 份，咁評分先公平。用唔同嘅切法（7），可以避免同第一層 CV 嘅切法完全重疊。
 
@@ -523,7 +541,19 @@ summary.round(5)
 
 ---
 
-## 9. 交 S7 上 Kaggle：會點？
+## 9. 交 S7 上 Kaggle：結果
+
+> **實際結果：S7 = 0.11624**，係所有 submission 入面最好嘅分數。
+>
+> | | Kaggle |
+> |---|---|
+> | S6（Step 12） | 0.12037 |
+> | 第一次嘗試 | 0.11745 |
+> | **S7（Step 13）** | **0.11624** |
+>
+> S6 → S7 進步咗 0.00413，而且**贏返第一次嘗試**。S7 同 S6 基本上只係 Id 2550 嘅估價唔同，所以結果符合下面表入面嘅第一種情況：Id 2550 嘅真實價錢應該同佢兩個「孖生兄弟」差唔多，都係偏平。
+
+以下係交之前嘅分析，留低做記錄，報告可以用嚟講「我哋交之前已經預計到咩」：
 
 `s7_outlier_flag.csv` 同 S6 比，基本上只係 Id 2550 嘅估價由 64.3 萬改成 26.0 萬，其他屋幾乎唔變。所以 S7 嘅 Kaggle 分數**主要取決於 Id 2550 嘅真實價錢**，而呢個我哋唔知：
 
@@ -553,7 +583,8 @@ summary.round(5)
 4. **驗證：** 自己設計 leave-one-outlier-out 測試，誤差大幅收窄（Cell 5）。
 5. **修正：** Step 13 保留 outlier，加 HugePartial 標記（Cell 6）。
 6. **對照：** 其他方法（stacking、seed averaging、v1 嘅方法）都試過，冇幫助（Cell 7）。
-7. **坦白嘅限制：** Step 13 係睇咗 leaderboard 先觸發嘅；我哋只交咗一次去驗證，冇反覆試 leaderboard。
+7. **結果：** S7 喺 Kaggle 拎到 0.11624，係最好嘅分數，亦都贏返第一次嘗試（0.11745）。
+8. **坦白嘅限制：** Step 13 係睇咗 leaderboard 先觸發嘅；我哋只交咗一次去驗證，冇反覆試 leaderboard。
 
 **個人問題「遇到嘅困難」都可以用呢段：** 「重做之後，CV 好咗，但 Kaggle 分數反而差過第一次。我哋冇盲目試更多 model，而係做 error analysis，發現咗 CV 嘅盲點同一間特別嘅 test 屋。」
 
@@ -575,6 +606,9 @@ A：唔算作弊，因為我哋冇用 test 嘅答案，只係用咗 train 數據
 
 **Q：點解 CV 分數冇因為 Step 13 而改善？咁點知佢有用？**
 A：因為兩間 outlier 喺同一個 fold，標準 CV 冇辦法測試呢個做法。所以我哋另外設計咗 leave-one-outlier-out 驗證：每次用一間訓練、估另一間，log 誤差由 −1.28 / −1.49 收窄到 −0.27 / −0.64。
+
+**Q：S7 嘅結果證明咗咩？**
+A：S7 同 S6 嘅預測幾乎只係喺 Id 2550 呢間屋唔同，而 Kaggle 分數由 0.12037 進步到 0.11624。所以佢支持我哋嘅分析：呢類「超大 Partial sale」真係會賣得平，而 Step 6 刪走 outlier 嘅做法，令 model 對呢類屋估得太貴。不過我哋只係交咗一次，所以呢個係「支持」，唔係「證明」。
 
 **Q：點解唔用 stacking？**
 A：我哋試過，用 nested CV 公平咁評分，結果差過等權重 blend（0.1226 vs 0.1191）。學出嚟嘅權重會遷就訓練數據嘅雜訊。

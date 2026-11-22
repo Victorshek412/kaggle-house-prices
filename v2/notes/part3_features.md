@@ -213,6 +213,39 @@ GarageArea 係 0，證實冇車房，所以 NaN 變咗 "NoGarage"。MSSubClass �
 - 一行寫兩個賦值：左邊兩個名，右邊兩個值，按次序對應。
 - 用新名（X3）而唔覆蓋 X：咁 X 仍然係原始數據，任何 step 都可以獨立重跑。
 
+**用 3 間屋試晒三種情況：**
+
+```python
+rows = X.loc[[39, 0, 1]].copy()          # 39 冇車房；0 同 1 有車房
+rows.loc[1, "GarageType"] = np.nan       # 假裝第 1 間嘅車房類型漏咗記錄
+print("before:")
+print(rows[["GarageArea", "GarageType"]])
+print("after:")
+print(fill_missing_meaning(rows)[["GarageArea", "GarageType"]])
+```
+
+跑出嚟會見到：
+
+```text
+before:
+    GarageArea GarageType
+39           0        NaN
+0          548     Attchd
+1          460        NaN
+after:
+    GarageArea GarageType
+39           0   NoGarage
+0          548     Attchd
+1          460        NaN
+```
+
+**點睇：**
+- 第 39 間：面積 0 而且類型缺失 → 證實冇車房，變 `NoGarage`。
+- 第 0 間：有車房、有類型 → 唔郁。
+- 第 1 間：有車房（460 呎）但類型缺失 → **真係唔知**，保持 NaN，交俾 Pipeline 處理。
+
+三種情況，三種處理，正正係呢個 function 嘅設計。
+
 ```python
 score, _, _ = cv_evaluate(ridge, X3, y, X3_test, target="log")
 record("3", "Missing values labelled by meaning; MSSubClass as category", score)
