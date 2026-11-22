@@ -63,10 +63,11 @@ def test_feature_steps():
         assert (RESULTS / "submissions" / name).is_file(), name
 
 
-def test_feature_functions(monkeypatch):
+def test_feature_functions(monkeypatch, tmp_path):
     import numpy as np
     import pandas as pd
     ns = run_part("part1_eda.py", monkeypatch)
+    ns["OUT_DIR"] = tmp_path  # don't overwrite the real notebook outputs
     for part in ("part2_baseline.py", "part3_features.py"):  # quick: Ridge-only parts
         exec((V2 / "src" / part).read_text(), ns)
     rows = ns["train"].iloc[:2].copy()
@@ -84,3 +85,12 @@ def test_outlier_step_changes_score():
     # Regression: Step 6 once had no effect because GrLivArea was already log-transformed.
     scores = read_results().set_index("step").cv_rmse
     assert abs(scores["6"] - scores["5"]) > 1e-6
+
+
+def test_model_steps():
+    scores = read_results().set_index("step").cv_rmse
+    for step in ("7", "8", "9", "10", "11"):
+        assert step in scores.index, step
+        assert scores[step] < scores["1"], step
+    assert (RESULTS / "submissions" / "s5_catboost.csv").is_file()
+    assert (RESULTS / "figures" / "05_model_comparison.png").is_file()
