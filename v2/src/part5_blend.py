@@ -118,7 +118,7 @@ summary.round(5)
 #   area. Together with the log target, that matches what a linear model can express.
 # - **Best single models:** gradient boosting (XGBoost, CatBoost). Bagging (Random Forest) was
 #   the weakest, because averaging can't remove the bias that every tree shares.
-# - **Final model:** an equal-weight blend of four models from different families. It beats
+# - **Blend (Step 12):** an equal-weight blend of four models from different families. It beats
 #   the best single model, because their errors are only partly correlated.
 # - **Limits:** every choice was made with the same 5-fold CV, so the CV scores are slightly
 #   optimistic. The Kaggle leaderboard is the independent check.

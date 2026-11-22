@@ -141,3 +141,44 @@ def test_notebook_matches_source():
                 for _, body in parse_cells(part.read_text(encoding="utf-8"))]
     notebook = nbformat.read(V2 / "house_prices_v2.ipynb", as_version=4)
     assert [cell.source for cell in notebook.cells] == expected, "run: python v2/build.py --execute"
+
+
+def _functions_from(part, names):
+    """Define only the named top-level functions of a notebook part (without running its cells)."""
+    import ast
+    import numpy as np
+    import pandas as pd
+    tree = ast.parse((V2 / "src" / part).read_text(encoding="utf-8"))
+    chosen = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names]
+    assert {node.name for node in chosen} == set(names), "function(s) missing from " + part
+    namespace = {"np": np, "pd": pd}
+    exec(compile(ast.Module(body=chosen, type_ignores=[]), part, "exec"), namespace)
+    return namespace
+
+
+def test_part6_helpers():
+    import numpy as np
+    import pandas as pd
+    ns = _functions_from("part6_error_analysis.py", ["clean_years", "add_huge_partial_flag"])
+    frame = pd.DataFrame({"GarageYrBlt": [2207.0, 2008.0, 1990.0], "YrSold": [2007, 2007, 2008]})
+    cleaned = ns["clean_years"](frame)
+    assert np.isnan(cleaned.GarageYrBlt.iloc[0])          # a typo like 2207 becomes missing
+    assert cleaned.GarageYrBlt.iloc[1:].tolist() == [2008.0, 1990.0]
+    assert frame.GarageYrBlt.iloc[0] == 2207.0             # the input frame is not changed
+
+    raw = pd.DataFrame({"GrLivArea": [5095, 5095, 1500], "SaleCondition": ["Partial", "Normal", "Partial"]})
+    logged = pd.DataFrame({"GrLivArea": np.log1p(raw.GrLivArea)})  # like X_final after Step 5
+    flagged = ns["add_huge_partial_flag"](logged, raw)
+    assert flagged.HugePartial.tolist() == [1, 0, 0]
+
+
+def test_step13_submission():
+    assert "13" in read_results().step.tolist()
+    assert (RESULTS / "submissions" / "s7_outlier_flag.csv").is_file()
+
+
+def test_s7_lowers_huge_partial_prediction():
+    import pandas as pd
+    s6 = pd.read_csv(RESULTS / "submissions" / "s6_blend.csv").set_index("Id").SalePrice
+    s7 = pd.read_csv(RESULTS / "submissions" / "s7_outlier_flag.csv").set_index("Id").SalePrice
+    assert s7[2550] < 0.6 * s6[2550]

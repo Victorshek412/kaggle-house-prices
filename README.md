@@ -8,7 +8,7 @@ Predicting Ames house sale prices for the Kaggle competition
 This is a beginner-readable notebook that builds the solution one measured step at a time, from a mean baseline through feature engineering and model comparison to a blend.
 
 - `v2/house_prices_v2.ipynb` is the notebook. It is generated from `v2/src/part*.py`.
-- `v2/notes/` has one study note per Part.
+- `v2/notes/` has one study note per Part. Part 0 covers the basics; Part 6 is the error analysis made after the first Kaggle results.
 - `v2/results/` holds CV scores, figures and submission CSVs.
 
 **On Kaggle:** create a notebook in the competition, upload `v2/house_prices_v2.ipynb` (or paste in its cells), and select **Run All**.

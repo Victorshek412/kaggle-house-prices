@@ -18,7 +18,7 @@ Part 4 揀到最好嘅單一 model 係 XGBoost（0.1231）。Part 5 問嘅問題
 | | CV RMSE |
 |---|---|
 | 最好嘅單一 model（XGBoost） | 0.1231 |
-| **最終 blend（Lasso + XGBoost + CatBoost + SVR）** | **0.1191** |
+| **Step 12 blend（Lasso + XGBoost + CatBoost + SVR）** | **0.1191** |
 | 進步（同 XGBoost 比） | −0.0040（3.3%） |
 
 **小心：** notebook 印出嚟嘅係「Step 12 … (−0.00442 vs previous step)」，因為 `record` 係同成績表上一行（SVR）比較，唔係同最好嘅 model 比（Part 4 §0.3 講過呢個陷阱）。報告要用 −0.0040。
@@ -174,7 +174,7 @@ saved s6_blend.csv
 ```
 
 −0.00442 係同上一行（SVR，0.12349）比。同最好嘅 XGBoost（0.12310）比係 −0.0040，報告用後者。
-記錄，出最終 submission **S6**。
+記錄，出 submission **S6**。（交咗 Kaggle 之後，Part 6 再做咗一次 error analysis，出咗 S7。）
 
 ### Cell 4：其他 blend 做對比（只係參考）
 
@@ -324,7 +324,7 @@ summary.to_csv(OUT_DIR / "submission_summary.csv", index=False)
 | Model 選擇 | 0.128（Ridge） | 0.123（XGBoost） | Boosting 處理非線性同交互作用 |
 | Blend | 0.123 | **0.119** | 唔同家族嘅 model 錯誤互補 |
 
-**由 Ridge baseline 到最終 blend，誤差總共跌咗 23.4%（0.155 → 0.119）。**
+**由 Ridge baseline 到 Step 12 blend，CV 誤差總共跌咗 23.4%（0.155 → 0.119）。** Kaggle 分數同 CV 唔完全一致，原因同跟住點處理，見 Part 6。
 
 ---
 
