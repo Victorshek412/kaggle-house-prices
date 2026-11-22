@@ -260,22 +260,140 @@ NO_GARAGE
 
 **點睇：** `word.upper()` 叫個字串變大楷。method 可以一路串落去，**由左至右**逐個做：先變大楷，再將 "NO" 換成 "NO_"。之後 `train.isna().sum()` 都係咁讀：先 `isna()`，再 `sum()`。
 
-### §1.7 其他常見寫法
+### §1.7 其他常見寫法（逐個示範）
 
-| 寫法 | 意思 |
-|---|---|
-| `# ...` | 註解，Python 會忽略，係寫俾人睇嘅 |
-| `import numpy as np` | 載入 numpy 呢個套件，之後用 `np` 呢個短名叫佢 |
-| `from sklearn.linear_model import Ridge` | 由套件入面只攞 `Ridge` 一樣嘢 |
-| `_` | 「呢個值我唔要」嘅慣例名 |
-| `assert 條件` | 條件唔成立就即刻報錯停低，用嚟做安全檢查 |
-| `global results` | 喺 function 入面改**外面**嗰個 `results` |
-| `x += 1` | 即係 `x = x + 1` |
-| `len(x)` | x 有幾多個 |
-| `range(n)` | 0, 1, …, n−1 |
-| `None` | Python 嘅「冇嘢」 |
+呢度啲寫法好細粒，但 Part 1–6 成日用。逐個睇一次佢哋做咗咩。
 
-**f-string：將數字塞入文字，仲可以控制格式**
+**① 註解 `#` 同 `+=`**
+
+```python
+total = 0        # 「#」後面係註解：Python 當冇見到，係寫俾人睇嘅
+total += 5       # 即係 total = total + 5，而家係 5
+total += 3       # 再加 3，而家係 8
+print(total)
+```
+
+跑出嚟會見到：
+
+```text
+8
+```
+
+**點睇：** `#` 後面嘅字唔會執行，用嚟解釋 code。`total += 5` 係「喺原本嘅數上面加 5」嘅簡寫。
+
+**② `len` 同 `range`**
+
+```python
+prices = [200, 150, 300]
+print(len(prices))            # 有幾多個
+print(list(range(3)))         # 0, 1, 2（由 0 開始，唔包 3）
+for i in range(len(prices)):
+    print("house", i, "costs", prices[i])
+```
+
+跑出嚟會見到：
+
+```text
+3
+[0, 1, 2]
+house 0 costs 200
+house 1 costs 150
+house 2 costs 300
+```
+
+**點睇：**
+- `len(prices)` 數有幾多個：3。用喺 DataFrame 就係數有幾多行。
+- `range(3)` 會產生 0、1、2，最常配 for 用：「做 3 次，每次俾我個編號」。
+
+**③ `None`：Python 嘅「冇嘢」**
+
+```python
+answer = None
+print(answer)
+print(answer is None)
+```
+
+跑出嚟會見到：
+
+```text
+None
+True
+```
+
+**點睇：** `None` 好似一個吉嘅盒，代表「呢度冇值」。`is None` 用嚟問「係咪吉嘅？」。Part 1 用 `next(…, None)`：搵唔到 data 就俾 `None`；Part 4 用 `step=None` 代表「唔使記錄入成績表」。
+
+**④ `_`：「呢個值我唔要」**
+
+```python
+def three_results():
+    return 0.155, "OOF predictions", "test predictions"
+
+score, _, _ = three_results()
+print(score)
+```
+
+跑出嚟會見到：
+
+```text
+0.155
+```
+
+**點睇：** function 一次過交返 3 樣嘢，但我只想要第一樣。用 `_` 接住其餘兩樣，意思係「呢兩個我唔要」。`cv_evaluate` 回傳 3 樣嘢，所以成日見到 `score, _, _ = cv_evaluate(...)`。
+
+**⑤ `assert`：安全檢查**
+
+```python
+rows = 1459
+assert rows == 1459      # 條件啱：靜靜雞通過，乜都唔印
+print("check passed")
+```
+
+跑出嚟會見到：
+
+```text
+check passed
+```
+
+如果條件唔啱（例如 `rows` 係 1458），程式會即刻停低，顯示：
+
+```text
+AssertionError
+```
+
+**點睇：** 好似機場安檢：冇問題就直接放行；有問題就即刻截停。`save_submission` 用佢喺交 Kaggle 之前檢查行數同價錢，寧願 notebook 停低，都唔好交一個錯嘅檔案。
+
+**⑥ `global`：喺 function 入面改外面嘅變數**
+
+```python
+counter = 0
+
+def add_one():
+    global counter        # 話俾 Python 聽：我要改嘅係外面嗰個 counter
+    counter = counter + 1
+
+add_one()
+add_one()
+print(counter)
+```
+
+跑出嚟會見到：
+
+```text
+2
+```
+
+**點睇：** 平時 function 入面改嘢，唔會影響外面。加咗 `global counter`，就會改到外面嗰個，所以叫兩次之後變咗 2。Part 2 嘅 `record` 用 `global results`，每次記錄都改到成個 notebook 共用嗰張成績表。
+
+**⑦ `import`：由工具箱攞工具**
+
+```python
+import numpy as np                         # 攞成個 numpy 工具箱，之後叫佢做 np
+from sklearn.linear_model import Ridge     # 只係由 sklearn 個箱攞 Ridge 呢件工具出嚟
+```
+
+Python 本身好細，好多功能放喺「套件（package）」入面，要用就要先 `import`。`np`、`pd`、`plt` 呢啲短名係大家約定俗成嘅叫法。
+
+**⑧ f-string：將數字塞入文字，仲可以控制格式**
 
 ```python
 score = 0.1276559
@@ -403,7 +521,7 @@ print(np.log(prices))
 [11.51292546 12.20607265 12.89921983]
 ```
 
-**點睇：** numpy array 好似 list，但可以**一次過計晒每一個**，唔使寫 for：`prices * 2` 每個都乘 2。`np.log(prices)` 每個都取 log。呢個叫**向量化（vectorization）**，又快又短。
+**點睇：** numpy array 好似 list，但可以**一次過計晒每一個**，唔使寫 for：`prices * 2` 每個都乘 2。好似喺 Excel 寫一條公式，再成欄拉落去。`np.log(prices)` 每個都取 log。呢個叫**向量化（vectorization）**，又快又短。
 
 ### §2.2 常用 function
 
@@ -466,10 +584,650 @@ print((area > 1000) & (price < 300))
 
 ## §3 pandas（`pd`）：處理表格
 
-下面用真實嘅 train 數據做例子。先讀入嚟（同 Part 1 Cell 1 一樣嘅讀法）：
+> 可以將 pandas 當成**「用 code 去玩 Excel」**。淨係睇文字好難想像，所以下面先整一張**得 3 間屋嘅迷你假表 `df`**，逐個 method 睇佢變出嚟係咩樣。最後先用返真數據。
 
 ```python
+import numpy as np
 import pandas as pd
+
+df = pd.DataFrame({
+    "Area":   [1000, np.nan, 1500],              # 面積：第 1 間唔知（缺失）
+    "Price":  [200, 150, 300],                   # 價錢（千蚊）
+    "Garage": ["Attchd", "NoGarage", "Attchd"],  # 車房類型（文字）
+    "Age":    [5, -1, 30],                       # 樓齡：-1 係錯誤數據
+})
+df
+```
+
+跑出嚟會見到：
+
+```text
+     Area  Price    Garage  Age
+0  1000.0    200    Attchd    5
+1     NaN    150  NoGarage   -1
+2  1500.0    300    Attchd   30
+```
+
+**點睇：**
+- 一張表有 3 行（3 間屋）、4 欄（4 個特徵）。
+- 最左邊嘅 0、1、2 **唔係數據**，而係每行嘅「名」，叫 **index**。
+- `NaN` 係空格（缺失），之後會示範點處理。
+- 樓齡 −1 冇可能，係故意放落去嘅「錯誤數據」，之後會示範點樣執靚佢。
+
+### §3.1 DataFrame、Series、index、NaN
+
+**DataFrame 同 Series：** 成張表叫 **DataFrame**；入面**單獨一條直欄**叫 **Series**。
+
+```python
+df["Price"]
+```
+
+跑出嚟會見到：
+
+```text
+0    200
+1    150
+2    300
+Name: Price, dtype: int64
+```
+
+**點睇：** 攞一欄出嚟就係一條 Series：左邊仍然係 index（0、1、2），右邊係數值，最底話你知欄名（Name）同資料類型（dtype：int64 即係整數）。
+
+**Index 唔一定係 0、1、2：**
+
+```python
+missing_count = df.isna().sum()
+missing_count
+```
+
+跑出嚟會見到：
+
+```text
+Area      1
+Price     0
+Garage    0
+Age       0
+dtype: int64
+```
+
+**點睇：** 呢條 Series 嘅 index 係**欄名**（Area、Price……），值係每欄有幾多個 NaN。Area 有 1 個，其他冇。Part 1 嘅 `missing` 表就係咁嚟：每一行代表 train 嘅一個欄。
+
+```python
+print(missing_count.index.tolist())
+print(missing_count.to_numpy())
+```
+
+跑出嚟會見到：
+
+```text
+['Area', 'Price', 'Garage', 'Age']
+[1 0 0 0]
+```
+
+**點睇：**
+- `.index` 攞出行名。
+- `.to_numpy()`（舊寫法係 `.values`）攞出入面嘅數，變成一個純數字嘅 numpy array（→ §2.1），冇咗行名。
+
+**NaN（缺失值）嘅兩個特性：**
+
+```python
+print(df["Area"].tolist())
+print(np.nan + 100)
+print(np.nan == 0)
+```
+
+跑出嚟會見到：
+
+```text
+[1000.0, nan, 1500.0]
+nan
+False
+```
+
+**點睇：** NaN 全名係 Not a Number。
+1. NaN 加任何數都係 NaN：「唔知」加 100 仍然係「唔知」。
+2. `NaN == 0` 係 False：「唔知」唔等於 0。Part 3 就係靠呢點，令面積係 NaN 嘅屋唔會被當成「冇車房」。
+
+### §3.2 揀嘢：揀行、揀欄
+
+> **記住一條公式：`[揀邊啲行, 揀邊啲欄]`**：逗號**前面**係橫行，**後面**係直欄。
+
+**① 攞一欄 vs 攞兩欄（點解要兩層方括號？）**
+
+```python
+df[["Price", "Area"]]
+```
+
+跑出嚟會見到：
+
+```text
+   Price    Area
+0    200  1000.0
+1    150     NaN
+2    300  1500.0
+```
+
+**點睇：**
+- **外層** `df[ ... ]`：代表「我要喺張表入面抽嘢」。
+- **內層** `["Price", "Area"]`：係一個 Python list（→ §1.2），話俾佢知你要抽**唔止一欄**，而係「呢張清單入面嘅所有欄」。
+- 攞一欄（`df["Price"]`）出嚟係 Series；攞幾欄出嚟仍然係一張 DataFrame。
+- `df.Price` 同 `df["Price"]` 效果一樣，但欄名如果用數字開頭（例如 `"1stFlrSF"`），Python 會以為係數字而報錯。**建議平時索性全部用方括號，最穩陣。**
+
+**② 用條件揀行（boolean mask → §2.3）**
+
+```python
+expensive = df["Price"] > 180
+print(expensive.tolist())
+df[expensive]
+```
+
+跑出嚟會見到：
+
+```text
+[True, False, True]
+     Area  Price  Garage  Age
+0  1000.0    200  Attchd    5
+2  1500.0    300  Attchd   30
+```
+
+**點睇：** `df["Price"] > 180` 逐行問「價錢大過 180？」，得出一串 True/False。將佢放入 `df[ ]`，就只會留低 True 嗰啲行：第 0 同第 2 間。
+
+**③ `.loc`：靠「名」或者「條件」揀**
+
+```python
+df.loc[df["Price"] > 180, "Garage"]
+```
+
+跑出嚟會見到：
+
+```text
+0    Attchd
+2    Attchd
+Name: Garage, dtype: object
+```
+
+**點睇：** 用返條公式 `[揀邊啲行, 揀邊啲欄]`：行 = 「價錢大過 180」嗰啲，欄 = `"Garage"`。
+
+```python
+print(df.loc[1, "Area"])
+```
+
+跑出嚟會見到：
+
+```text
+nan
+```
+
+**點睇：** 行名係 1、欄名係 Area 嗰一格，即係嗰個缺失值，印出嚟係 `nan`。
+
+**④ `.iloc`：靠「排第幾」揀**
+
+```python
+df.iloc[[0, 2]]
+```
+
+跑出嚟會見到：
+
+```text
+     Area  Price  Garage  Age
+0  1000.0    200  Attchd    5
+2  1500.0    300  Attchd   30
+```
+
+**點睇：** `iloc` 個 `i` 代表 integer（整數）。`[0, 2]` 即係「排第 0 同第 2 嘅行」（由 0 開始數）。`.loc` 睇**名**，`.iloc` 睇**位置**。我哋嘅表行名同位置剛好一樣，所以暫時睇唔出分別；但排完序（§3.3.2 `.sort_values`）之後就唔同。
+
+**⑤ 用 `.loc` 改值**
+
+```python
+fixed = df.copy()
+fixed.loc[fixed["Age"] < 0, "Age"] = np.nan
+fixed
+```
+
+跑出嚟會見到：
+
+```text
+     Area  Price    Garage   Age
+0  1000.0    200    Attchd   5.0
+1     NaN    150  NoGarage   NaN
+2  1500.0    300    Attchd  30.0
+```
+
+**點睇：** 「樓齡細過 0」嗰啲行嘅 Age 欄，改做 NaN（唔知）。只有第 1 間被改，其他唔郁。Part 3（填 NoGarage）同 Part 6（清理寫錯嘅年份）都係用呢個寫法。（點解要先 `.copy()` → §3.4。）
+
+**⑥ `.isin` 同 `.eq`：逐格問問題**
+
+```python
+print(df["Garage"].isin(["Attchd", "Detchd"]).tolist())
+print(df["Garage"].eq("NoGarage").tolist())
+```
+
+跑出嚟會見到：
+
+```text
+[True, False, True]
+[False, True, False]
+```
+
+**點睇：**
+- `.isin([...])`：每格「喺唔喺呢張清單入面？」。
+- `.eq(v)`：每格「係咪等於 v？」，同 `== v` 一樣。
+
+### §3.3 常用 method（逐個示範）
+
+#### §3.3.1 檢查張表（好似第一次打開一個 Excel 檔，先周圍望下）
+
+```python
+df.shape
+```
+
+跑出嚟會見到：
+
+```text
+(3, 4)
+```
+
+**`.shape`（行數, 欄數）：** (3, 4) 即係 3 行、4 欄。載入數據之後第一時間用佢睇下份表有幾大，例如 train 係 (1460, 81)。留意 `.shape` 後面**冇括號**，因為佢係一個「屬性」（資料），唔係一個「動作」。
+
+```python
+df.head(2)
+```
+
+跑出嚟會見到：
+
+```text
+     Area  Price    Garage  Age
+0  1000.0    200    Attchd    5
+1     NaN    150  NoGarage   -1
+```
+
+**`.head(n)`：** 只顯示頭 n 行（唔寫 n 就係 5 行）。張表有幾千行，印晒出嚟會洗版；用佢就可以望一望個格式。`.tail(n)` 就係最後 n 行。
+
+```python
+df.dtypes
+```
+
+跑出嚟會見到：
+
+```text
+Area      float64
+Price       int64
+Garage     object
+Age         int64
+dtype: object
+```
+
+**`.dtypes`：** 每欄嘅資料類型。
+- `float64`：有小數嘅數字。Area 雖然係整數，但因為有 NaN，pandas 會用小數類型裝。
+- `int64`：整數。
+- `object`：文字。
+
+```python
+df.isna()
+```
+
+跑出嚟會見到：
+
+```text
+    Area  Price  Garage    Age
+0  False  False   False  False
+1   True  False   False  False
+2  False  False   False  False
+```
+
+**`.isna()`：** 變出一張**一模一樣大細**嘅表，但入面只有 True（空咗）同 False（有數）。只有第 1 行嘅 Area 係 True。
+
+```python
+df.isna().sum()
+```
+
+跑出嚟會見到：
+
+```text
+Area      1
+Price     0
+Garage    0
+Age       0
+dtype: int64
+```
+
+**`.isna().sum()`：** 再加總，就係「每欄有幾多個缺失」。加總時 True 當 1、False 當 0。
+
+```python
+df["Garage"].value_counts()
+```
+
+跑出嚟會見到：
+
+```text
+Garage
+Attchd      2
+NoGarage    1
+Name: count, dtype: int64
+```
+
+**`.value_counts()`：** 數每個值出現幾多次：Attchd 2 次，NoGarage 1 次。
+
+#### §3.3.2 幫數據執靚仔
+
+```python
+df["Area"].fillna(1200)
+```
+
+跑出嚟會見到：
+
+```text
+0    1000.0
+1    1200.0
+2    1500.0
+Name: Area, dtype: float64
+```
+
+**`.fillna(v)`（將缺失填做 v）：** NaN 變咗 1200，其他唔變。**留意：** 呢個寫法只係「睇吓結果」，原本嘅 `df` 冇改到；要真係改，就要寫 `df["Area"] = df["Area"].fillna(1200)`。
+
+```python
+pd.Series([60, 20, 60]).astype(str).tolist()
+```
+
+跑出嚟會見到：
+
+```text
+['60', '20', '60']
+```
+
+**`.astype(str)`（轉做文字）：** 數字 60 變成文字 `'60'`（有引號）。Part 3 用佢將 MSSubClass 由「數字」變成「類別」。
+
+```python
+df["Age"].clip(lower=0)
+```
+
+跑出嚟會見到：
+
+```text
+0     5
+1     0
+2    30
+Name: Age, dtype: int64
+```
+
+**`.clip(lower=0)`（設地板）：** 細過 0 嘅當 0，所以 −1 變 0；其他大過 0 嘅數就唔變。好似地板：跌唔落 0 以下。Part 3 用佢令樓齡唔會係負數。
+
+```python
+pd.Series([0.123456, 0.987654]).round(3)
+```
+
+跑出嚟會見到：
+
+```text
+0    0.123
+1    0.988
+dtype: float64
+```
+
+**`.round(n)`：** 取 n 個小數位，令數字易睇啲。
+
+```python
+quality = {"Ex": 5, "Gd": 4, "TA": 3}
+pd.Series(["Gd", "Ex", "TA", "Po"]).map(quality)
+```
+
+跑出嚟會見到：
+
+```text
+0    4.0
+1    5.0
+2    3.0
+3    NaN
+dtype: float64
+```
+
+**`.map(字典)`（查字典翻譯）：** 逐格去 dict 度查：Gd → 4、Ex → 5、TA → 3。字典冇 "Po" 呢個字，所以變 NaN。因為有咗 NaN，啲數會用小數類型裝，所以顯示 4.0 而唔係 4。Part 6 用佢將質素等級變成分數。
+
+```python
+df.sort_values("Price", ascending=False)
+```
+
+跑出嚟會見到：
+
+```text
+     Area  Price    Garage  Age
+2  1500.0    300    Attchd   30
+0  1000.0    200    Attchd    5
+1     NaN    150  NoGarage   -1
+```
+
+**`.sort_values`（排序）：** 按價錢排，`ascending=False` 即係由大到細（唔寫就係由細到大）。留意 **index 跟住條行走**：排完之後係 2、0、1。所以呢個時候 `.loc[0]`（名叫 0）同 `.iloc[0]`（排第一）就唔同咗。
+
+```python
+smaller = df.drop(columns="Garage")
+print(smaller.columns.tolist())
+print(df.columns.tolist())
+```
+
+跑出嚟會見到：
+
+```text
+['Area', 'Price', 'Age']
+['Area', 'Price', 'Garage', 'Age']
+```
+
+**`.drop(columns=...)`：點解原本張表唔變？** 你可以當 drop 係「**影印一張新表，再喺影印本度刪走 Garage 欄**」。原本嗰張 `df` 依然原封不動。如果你想真係改咗原本張表，要寫成 `df = df.drop(columns="Garage")`。
+
+#### §3.3.3 計數同搵規律
+
+**`.sum()` vs `.sum(axis=1)`：棟篤加 vs 打橫加**
+
+```python
+numbers = df[["Area", "Price"]]
+print(numbers.sum())
+print(numbers.sum(axis=1))
+```
+
+跑出嚟會見到：
+
+```text
+Area     2500.0
+Price     650.0
+dtype: float64
+0    1200.0
+1     150.0
+2    1800.0
+dtype: float64
+```
+
+**點睇：**
+- `.sum()`（**棟篤加**，即係每欄由上加到落）：Area 總和 = 1000 + 1500 = 2500，Price 總和 = 200 + 150 + 300 = 650。
+- `.sum(axis=1)`（**打橫加**，即係每行由左加到右）：第 0 行 1000 + 200 = 1200；第 2 行 1500 + 300 = 1800。
+- 第 1 行點解係 150？因為 `.sum()` **預設會跳過 NaN**，只加 150。
+
+**留意：用 `+` 號就唔同！**
+
+```python
+(df["Area"] + df["Price"]).tolist()
+```
+
+跑出嚟會見到：
+
+```text
+[1200.0, nan, 1800.0]
+```
+
+**點睇：** 用 `+` 直接相加，NaN 會「傳染」：第 1 行變 NaN。Part 3 嘅 `TotalSF = GrLivArea + TotalBsmtSF` 用 `+`，所以缺失嘅屋會保持 NaN，交俾 Pipeline 填，而唔會被當成 0。
+
+```python
+prices = pd.Series([100, 120, 130, 900])
+print(prices.mean(), prices.median())
+```
+
+跑出嚟會見到：
+
+```text
+312.5 125.0
+```
+
+**`.mean()` 同 `.median()`：** 平均係 312.5，被 900 呢間豪宅拉高咗；中位數係 125（排好之後中間兩個 120、130 嘅平均），唔受豪宅影響。所以 Part 2 用 median 填缺失。
+
+```python
+profits = pd.Series([20, -5, 30])
+profits.diff()
+```
+
+跑出嚟會見到：
+
+```text
+0     NaN
+1   -25.0
+2    35.0
+dtype: float64
+```
+
+**`.diff()`（同上一行嘅差）：** 睇「多咗定少咗」：
+- 第 0 行：NaN（冇上一行可以比）；
+- 第 1 行：−5 − 20 = **−25**；
+- 第 2 行：30 − (−5) = **+35**。
+
+成績表用佢計「每一步進步咗幾多」。
+
+```python
+even = pd.Series([1, 2, 3, 4, 5])
+long_tail = pd.Series([1, 1, 2, 2, 3, 50])
+print(round(even.skew(), 2), round(long_tail.skew(), 2))
+```
+
+跑出嚟會見到：
+
+```text
+0.0 2.44
+```
+
+**`.skew()`（偏度）：** 量度啲數字有冇「一邊倒、貧富懸殊」。
+- 1 到 5 平均分佈：skew = 0，代表好平均。
+- 有一個 50 拖住條長尾巴：skew 好大，代表有少數極端大數拉歪晒，即係樓價要用 log 壓縮嘅情況（→ §5.3）。
+
+```python
+toy = pd.DataFrame({"Area": [800, 1000, 1500, 2000],
+                    "Price": [120, 150, 210, 280],
+                    "Age": [40, 10, 30, 5]})
+toy.corr().round(2)
+```
+
+跑出嚟會見到：
+
+```text
+       Area  Price   Age
+Area   1.00   1.00 -0.59
+Price  1.00   1.00 -0.61
+Age   -0.59  -0.61  1.00
+```
+
+**`.corr()`（相關係數）：** 睇兩欄之間有幾「拍住上」，數值介乎 −1 到 1。
+- 接近 1：一齊升，例如面積越大、樓價越高（Area 對 Price 差唔多係 1）。
+- 接近 −1：一個升、一個跌，例如樓齡越大、樓價越低（Age 對 Price 係負數）。
+- 接近 0：冇乜直線關係。
+- 對角線一定係 1：自己同自己。
+
+#### §3.3.4 砌新表、轉格式、存檔
+
+```python
+row = pd.DataFrame([{"step": "1", "cv_rmse": 0.155}])
+row
+```
+
+跑出嚟會見到：
+
+```text
+  step  cv_rmse
+0    1    0.155
+```
+
+**一個 dict 變一行：** `[{...}]`：外面個 list 代表「一堆行」，入面每個 dict 就係一行，key 變欄名。Part 2 嘅 `record` 用呢個方法砌新嗰行。
+
+```python
+table = pd.DataFrame([{"step": "0", "cv_rmse": 0.408}])
+table = pd.concat([table, row], ignore_index=True)
+table
+```
+
+跑出嚟會見到：
+
+```text
+  step  cv_rmse
+0    0    0.408
+1    1    0.155
+```
+
+**`pd.concat`（疊埋）：** 將兩張表上下疊埋，好似喺 Excel 底部貼多幾行。`ignore_index=True` 即係重新編行號 0、1，唔係兩行都叫 0。
+
+```python
+print(table["step"].tolist())
+print(table["cv_rmse"].to_numpy())
+```
+
+跑出嚟會見到：
+
+```text
+['0', '1']
+[0.408 0.155]
+```
+
+**`.tolist()` 同 `.to_numpy()`：** 變成普通 Python list，或者 numpy array。印出嚟易睇啲，或者方便同其他 array 一齊計。
+
+```python
+by_step = table.set_index("step")["cv_rmse"]
+print(by_step["1"])
+```
+
+跑出嚟會見到：
+
+```text
+0.155
+```
+
+**`.set_index("step")`：** 將 step 欄變成行名。之後就可以用 `by_step["1"]` 直接查 step 1 嘅分數，好似查字典。反過嚟，`.reset_index(drop=True)` 會將行名重新編成 0、1、2……
+
+```python
+print(table.to_csv(index=False))
+print(table.to_csv())
+```
+
+跑出嚟會見到：
+
+```text
+step,cv_rmse
+0,0.408
+1,0.155
+
+,step,cv_rmse
+0,0,0.408
+1,1,0.155
+```
+
+**`.to_csv(檔名, index=False)`（存檔）：** 呢度冇俾檔名，所以佢直接將 CSV 內容印出嚟俾你睇。
+- 第一個（`index=False`）只有 step 同 cv_rmse 兩欄。
+- 第二個多咗最左邊一欄行號（0、1）。如果交俾 Kaggle 嘅檔案多咗呢一欄，Kaggle 就會唔收，所以我哋一定寫 `index=False`。
+
+```python
+print(table.empty, pd.DataFrame().empty)
+print(pd.Series([True, True, False]).all())
+print(np.isfinite([1.0, np.nan, np.inf]))
+```
+
+跑出嚟會見到：
+
+```text
+False True
+False
+[ True False False]
+```
+
+**三個「檢查」工具：**
+- `.empty`：張表係咪完全冇行？`table` 有 2 行，所以係 False；一張空表係 True。
+- `.all()`：係咪**全部**都係 True？有一個 False，所以係 False。
+- `np.isfinite(...)`：每個數係咪「正常數字」？NaN 同無限大（inf）都唔係。`save_submission` 用佢檢查有冇壞嘅預測。
+
+#### §3.3.5 用返真數據試吓
+
+```python
 train = pd.read_csv("../house-prices-advanced-regression-techniques/train.csv",
                     keep_default_na=False, na_values=["NA", ""])
 small = train[["Id", "GrLivArea", "GarageType", "SalePrice"]].head(5)
@@ -487,193 +1245,15 @@ small
 4   5       2198     Attchd     250000
 ```
 
-### §3.1 DataFrame、Series、index
-
-**點睇上面個結果：**
-- 成張表叫 **DataFrame**，好似 Excel。
-- 最左邊嗰欄 0、1、2、3、4 唔係數據，而係**行名（index）**。
-- 上面嘅 `Id`、`GrLivArea`……係**欄名**。
-
-**Series：DataFrame 入面嘅一欄**
-
-```python
-small["SalePrice"]
-```
-
-跑出嚟會見到：
-
-```text
-0    208500
-1    181500
-2    223500
-3    140000
-4    250000
-Name: SalePrice, dtype: int64
-```
-
-**點睇：** 攞一欄出嚟，就係一條 **Series**：左邊仍然係 index（0–4），右邊係數值，最底仲話你知欄名同資料類型（int64 = 整數）。`small.SalePrice` 同 `small["SalePrice"]` 一樣；不過欄名以數字開頭（例如 `"1stFlrSF"`）就只可以用方括號。
-
-**Index 唔一定係 0, 1, 2：**
-
-```python
-missing = train[["PoolQC", "Alley", "LotFrontage", "Street"]].isna().sum()
-missing
-```
-
-跑出嚟會見到：
-
-```text
-PoolQC         1453
-Alley          1369
-LotFrontage     259
-Street            0
-dtype: int64
-```
-
-**點睇：** 呢條 Series 嘅 index 係 **train 嘅欄名**（PoolQC、Alley……），值係每欄缺咗幾多格。Part 1 嘅 `missing` 表就係咁樣嚟。
-
-```python
-print(missing.index.tolist())
-print(missing.values)
-```
-
-跑出嚟會見到：
-
-```text
-['PoolQC', 'Alley', 'LotFrontage', 'Street']
-[1453 1369  259    0]
-```
-
-**點睇：** `.index` 攞出行名；`.values` 攞出入面嘅數值，變成一個 numpy array（冇咗行名，純粹一串數）。
-
-**NaN：缺失值**
-
-```python
-print(small["GarageType"].tolist())
-print(small["GarageType"].isna().tolist())
-```
-
-跑出嚟會見到：
-
-```text
-['Attchd', 'Attchd', 'Attchd', 'Detchd', 'Attchd']
-[False, False, False, False, False]
-```
-
-**點睇：** 呢 5 間屋都有車房，所以冇缺失。如果有，pandas 會顯示 **NaN**（Not a Number），即係「缺失」嘅特別值。NaN 有兩個特性要記：NaN 加任何數都係 NaN；`NaN == 0` 係 False。
-
-**`set_index` 同 `reset_index`**
-
-```python
-scores = pd.DataFrame({"step": ["1", "2", "5"], "cv_rmse": [0.155, 0.152, 0.132]})
-by_step = scores.set_index("step").cv_rmse
-print(by_step["5"])
-```
-
-跑出嚟會見到：
-
-```text
-0.132
-```
-
-**點睇：** `set_index("step")` 將 step 欄變成行名，之後就可以用 `by_step["5"]` 直接查 step 5 嘅分數。`reset_index(drop=True)` 就係反過嚟，將行名重新編成 0, 1, 2…。
-
-### §3.2 揀行揀欄
-
-```python
-print(small[["GrLivArea", "SalePrice"]].shape)
-print(small.iloc[[0, 2]]["SalePrice"].tolist())
-print(small.loc[small.SalePrice > 200000, "Id"].tolist())
-```
-
-跑出嚟會見到：
-
-```text
-(5, 2)
-[208500, 223500]
-[1, 3, 5]
-```
-
-**點睇：**
-- `small[["GrLivArea", "SalePrice"]]`：攞兩欄（**兩層**方括號：外層係「揀欄」，內層係一個 list）。`.shape` 係（行數, 欄數）= (5, 2)。
-- `.iloc[[0, 2]]`：用**位置**揀第 0 同第 2 行。
-- `.loc[條件, "Id"]`：揀「SalePrice 大過 20 萬」嘅行嘅 Id 欄。睇返上面張表，Id 1（208,500）、Id 3（223,500）、Id 5（250,000）超過 20 萬。
-
-**用 `.loc` 改值：**
-
-```python
-demo = small.copy()
-demo.loc[demo.GrLivArea > 2000, "GarageType"] = "BigHouseGarage"
-demo[["GrLivArea", "GarageType"]]
-```
-
-跑出嚟會見到：
-
-```text
-   GrLivArea      GarageType
-0       1710          Attchd
-1       1262          Attchd
-2       1786          Attchd
-3       1717          Detchd
-4       2198  BigHouseGarage
-```
-
-**點睇：** 只有 GrLivArea 大過 2000 嘅嗰一行（index 4，2198 呎）嘅 GarageType 被改咗，其他行唔郁。Part 3 用同一個寫法，將「GarageArea 係 0 而且 GarageType 缺失」嘅行改做 "NoGarage"。
-
-`df.drop(columns="Id")`：拎走 Id 欄，回傳一張新表，原本嗰張唔變。
-
-### §3.3 常用 method
-
-```python
-s = pd.Series([3, 0, 1, 0, 3], index=["a", "b", "c", "d", "e"])
-print(s.eq(0).tolist())
-print(s.isin([1, 3]).tolist())
-print(s.sort_values(ascending=False).index.tolist())
-print(s.value_counts().to_dict())
-print(s.diff().tolist())
-```
-
-跑出嚟會見到：
-
-```text
-[False, True, False, True, False]
-[True, False, True, False, True]
-['a', 'e', 'c', 'b', 'd']
-{3: 2, 0: 2, 1: 1}
-[nan, -3.0, 1.0, -1.0, 3.0]
-```
-
-**逐行點睇：**
-- `.eq(0)` 即係 `== 0`，逐格問「係咪 0？」。
-- `.isin([1, 3])`：逐格問「喺唔喺呢張清單入面？」。
-- `.sort_values(ascending=False)`：由大到細排（`ascending=True` 就係由細到大）。排完之後 index 嘅次序都跟住變。
-- `.value_counts()`：每個值出現幾多次：3 出現 2 次、0 出現 2 次、1 出現 1 次。
-- `.diff()`：每個同上一個嘅差。第一個冇上一個，所以係 NaN（`nan`）。
-
-其他會用到嘅：
-
-| Method | 做咩 |
-|---|---|
-| `.shape` | (行數, 欄數) |
-| `.head(n)` / `.tail(n)` | 頭 n 行 / 最後 n 行（預設 5） |
-| `.isna()` | 每格係咪缺失 |
-| `.fillna(v)` | 將缺失填做 v |
-| `.astype(str)` | 轉做文字 |
-| `.sum()` / `.sum(axis=1)` | 每欄直向加總 / 每行橫向加總 |
-| `.skew()` | 偏度（§5.3） |
-| `.corr()` | 相關係數 |
-| `.copy()` | 整一個獨立副本（§3.4） |
-| `.clip(lower=0)` | 細過 0 嘅當 0 |
-| `.round(n)` | 取 n 個小數位 |
-| `.tolist()` | 變成普通 list |
-| `.select_dtypes("number")` | 只揀數字欄（`exclude=` 就係排除） |
-| `.to_csv(路徑, index=False)` | 存成 CSV；`index=False` 即係唔好將行名寫入檔案（否則 Kaggle 會見到多咗一欄） |
-| `pd.concat([表1, 表2])` | 將兩張表上下疊埋 |
-| `.empty` | 張表係咪完全冇行 |
-| `.all()` | 係咪全部都係 True |
-| `np.isfinite(x)` | 每個數係咪正常數字（唔係 NaN、唔係無限大） |
+**點睇：** 同迷你表一樣嘅道理，只係變咗真嘅樓價數據：用兩層方括號揀 4 欄，再用 `.head(5)` 攞頭 5 行。上面學過嘅全部 method，都可以照樣用喺 `train` 呢張 1460 行嘅大表。
 
 ### §3.4 點解 function 第一行要寫 `df = df.copy()`
+
+**你可以用 Google Docs 嚟想像：**
+- **唔寫 `.copy()`**：你將張表傳入去一個 function，就好似直接 send 條「**可編輯連結**」俾人。Function 入面改咗啲數字，你外面原本嗰張表都會一齊被改花晒。
+- **寫咗 `df = df.copy()`**：即係一入到去第一時間撳「**建立副本**」。之後所有修改都只會郁個副本，外面原本嗰張完全唔受影響。
+
+用真數據證明一次：
 
 ```python
 def bad_fill(df):
@@ -699,7 +1279,7 @@ after good_fill: Attchd
 after bad_fill:  CHANGED
 ```
 
-**點睇：** `bad_fill` 直接改傳入嚟嘅表，結果**外面嗰張 `original` 都被改埋**。`good_fill` 先 `.copy()` 一份，只改副本，外面完全唔受影響。所以 Part 3 每個 function 第一行都係 `df = df.copy()`：咁 `X` 同 `X3` 先可以同時存在，你重跑任何一格都唔會撈亂。
+**點睇：** 用 `good_fill` 之後，`original` 仲係 Attchd（冇被改）；用 `bad_fill` 之後，`original` 都變咗 CHANGED（被改埋）。所以 Part 3 每個 function 第一行都係 `df = df.copy()`：咁 `X` 同 `X3` 先可以同時存在、互不影響，你喺 notebook 隨時重跑任何一格都唔會越改越亂。
 
 ---
 
@@ -713,7 +1293,7 @@ after bad_fill:  CHANGED
 
 ### §4.2 Model、`fit`、`predict`
 
-**一句講晒：** model 係一條「由 X 計出 y」嘅規則，入面有啲數字要由數據學返嚟。`fit` 就係學，`predict` 就係用。
+**一句講晒：** model 係一條「由 X 計出 y」嘅規則，入面有啲數字要由數據學返嚟。`fit` 就係**溫書**（睇住答案學），`predict` 就係**考試**（冇答案，自己估）。
 
 ```python
 from sklearn.linear_model import LinearRegression
@@ -994,26 +1574,75 @@ print(np.log(np.array([1, 2, 101, 10001])).round(3))
 
 ## §6 Matplotlib（`plt`）：畫圖
 
-**Figure 同 Axes：** `fig` 係成張紙，`ax` 係紙上面其中一格圖。一張紙可以有幾格（叫 `axes`）。畫嘢係對 `ax` 做，存檔係對 `fig` 做。
+**Figure 同 Axes：** 想像你有一張畫紙。
+- `fig`（figure）係**成張畫紙**；
+- `ax`（axes）係畫紙上面**其中一格圖**。一張紙可以分幾格，幾格就叫 `axes`。
+- 畫嘢係對**格**（`ax`）做，存檔係對**成張紙**（`fig`）做。
+
+**① 一張紙、兩格圖：散點圖同直棒圖**
 
 ```python
-fig, ax = plt.subplots(figsize=(7, 5))       # 一張紙、一格圖，闊 7 吋高 5 吋
-ax.scatter(train.GrLivArea, train.SalePrice)  # 喺格圖度畫散點
-ax.set(title="Living area vs price", xlabel="GrLivArea", ylabel="SalePrice")
-fig.tight_layout()                            # 自動調整，費事啲字重疊
-fig.savefig("figure.png", dpi=120)            # 存檔（dpi 越大越清）
-plt.show()                                    # 喺 notebook 顯示
+import matplotlib.pyplot as plt
+
+fig, axes = plt.subplots(1, 2, figsize=(8, 3))       # 1 行 2 格，闊 8 吋、高 3 吋
+axes[0].scatter(toy["Area"], toy["Price"])            # 第 1 格：散點圖
+axes[0].set(title="scatter: Area vs Price", xlabel="Area", ylabel="Price")
+axes[1].bar(["Attchd", "NoGarage"], [2, 1], color="orange")   # 第 2 格：直棒圖
+axes[1].set(title="bar: garage types", ylabel="houses")
+fig.tight_layout()                                    # 自動調位，費事啲字重疊
 ```
 
-| 寫法 | 意思 |
-|---|---|
-| `fig, axes = plt.subplots(1, 2)` | 1 行 2 格，`axes[0]`、`axes[1]` 係兩格圖 |
-| `ax.hist(...)` | 直方圖：數據分佈 |
-| `ax.bar(...)` / `ax.barh(...)` | 直棒圖 / 橫棒圖（橫棒圖由下而上畫） |
-| `ax.scatter(...)` | 散點圖 |
-| `ax.imshow(表)` | 將一張數字表畫成一格格顏色（熱力圖） |
-| `ax.set(title=, xlabel=, ylabel=, xlim=, ylim=)` | 一次過設標題、軸名、軸範圍 |
-| `ax.text(x, y, "字", ha="center", va="center")` | 喺 (x, y) 寫字；`ha` / `va` 係水平 / 垂直對齊方式 |
-| `ax.legend()` | 顯示圖例 |
+跑出嚟嘅圖：
 
-每幅圖真正嘅樣，可以喺 Part 1–5 嘅筆記入面直接睇到。
+![example figure](images/part0_basics_1.png)
+
+**點睇：**
+- `plt.subplots(1, 2)` 開一張紙，分 1 行 2 格；`axes[0]` 係左邊嗰格，`axes[1]` 係右邊。
+- `scatter(x, y)`：每間屋一點。可以睇到面積越大，點就越高。
+- `bar(名, 高度)`：直棒圖，比較唔同類別嘅數量。
+- `.set(title=..., xlabel=..., ylabel=...)`：一次過設標題同兩條軸嘅名。
+
+**② 直方圖：睇數據點樣分佈**
+
+```python
+fig, ax = plt.subplots(figsize=(4, 3))               # 得一格，所以叫 ax（單數）
+ax.hist(train["SalePrice"], bins=30, color="steelblue")
+ax.set(title="hist: SalePrice", xlabel="price ($)")
+fig.tight_layout()
+```
+
+跑出嚟嘅圖：
+
+![example figure](images/part0_basics_2.png)
+
+**點睇：** `hist` 將樓價切成 30 段（`bins=30`），每段數下有幾多間屋，棒越高代表越多屋喺嗰個價錢範圍。條尾巴拖向右邊，就係 §5.3 講嘅右偏。
+
+**③ 橫棒圖、文字同圖例**
+
+```python
+fig, ax = plt.subplots(figsize=(4, 3))
+ax.barh(["Lasso", "XGBoost", "Blend"], [0.1255, 0.1231, 0.1191], color="seagreen")
+ax.text(0.1191, 2, " best", va="center")              # 喺 (x, y) 位置寫字
+ax.set(title="barh: CV RMSE", xlim=(0.11, 0.13))      # xlim：x 軸由 0.11 到 0.13
+fig.tight_layout()
+```
+
+跑出嚟嘅圖：
+
+![example figure](images/part0_basics_3.png)
+
+**點睇：**
+- `barh` 係**橫**棒圖，名字長嘅時候比直棒圖易睇。留意佢係**由下而上**畫：第一個（Lasso）喺最底。所以 notebook 成日用 `[::-1]` 倒轉次序，令最重要嘅排喺最上面。
+- `ax.text(x, y, "字")`：喺圖入面某個位置寫字。`va="center"` 係垂直置中，`ha` 就係水平對齊。
+- `xlim=(0.11, 0.13)`：x 軸唔由 0 開始，差異先睇得清楚。報告用呢類圖要講明呢點。
+
+**④ 存檔同顯示**
+
+```python
+fig.savefig("figure.png", dpi=120)   # 將成張紙存做圖片檔，dpi 越大越清
+plt.show()                           # 喺 notebook 入面顯示出嚟
+```
+
+`ax.legend()` 會顯示圖例，即係「邊種顏色或記號代表咩」。用法係畫嘅時候加 `label="..."`，例如 Part 1 嘅 outlier 紅圈。Part 5 嘅 `ax.imshow(表)` 會將一張數字表畫成一格格顏色，即係熱力圖。
+
+每幅真正嘅圖，都可以喺 Part 1–6 嘅筆記入面直接睇到。
