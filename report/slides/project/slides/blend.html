@@ -3,12 +3,10 @@
 <p class="eyebrow">BLENDING</p>
 <h2>Blend models that make different mistakes</h2>
 </div>
-<div class="body" style="grid-template-columns:840px 1fr">
-<div class="col tight rise" style="--i:1">
-<p class="caption">How alike the models’ errors are (correlation)</p>
-<img class="fig" style="width:840px" src="/_blob/d755ca9d7a8ef1349ff2ae21addfc2cf" alt="Heatmap of correlations between the models' errors; Ridge, Lasso and ElasticNet (outlined) correlate at 0.99, the others 0.76 to 0.93">
-</div>
+<div class="body" style="grid-template-columns:760px 1fr; gap:96px">
+<img class="fig rise" style="--i:1; height:640px; width:auto" src="/_blob/e3919176590204f5979c33e2d35b53e0" alt="Half heatmap of correlations between the models' errors; Ridge, Lasso and ElasticNet (outlined) correlate at 0.99, the others 0.76 to 0.93">
 <div class="col" style="gap:40px">
+<p class="caption">The chart shows how alike the models’ errors are (correlation, 1.00 = identical).</p>
 <p class="lead">Ridge, Lasso and ElasticNet make almost the same errors (0.99), so we keep only <b>Lasso</b>.</p>
 <p class="lead">Lasso + XGBoost + CatBoost + SVR, <b>equal weights</b>:</p>
 <div class="col tight">

@@ -46,23 +46,24 @@ ax.set(xlabel="living area (sq ft)", ylabel="price ($1,000)", xlim=(0, 6000))
 fig.tight_layout()
 save(fig, "outliers.png", ALT)
 
-# CV vs Kaggle by submission: 1000 x 660 px
+# CV vs Kaggle by submission: full slide width, 1664 x 540 px
 k = pd.read_csv(ROOT / "v2" / "results" / "kaggle_log.csv")
 x = np.arange(1, len(k) + 1)
-fig, ax = plt.subplots(figsize=(5.0, 3.3))
-ax.axhline(0.11745, ls=(0, (4, 3)), color=GREY, lw=1.5)
-ax.text(0.85, 0.1168, "first attempt 0.11745", va="top", fontsize=11, color=SOFT)
-ax.plot(x, k.cv_rmse, "o-", color=BLUE, lw=2, ms=7, label="our CV")
-ax.plot(x, k.kaggle_score, "s-", color=ACCENT, lw=2, ms=7, label="Kaggle")
-ax.annotate("0.12037", (6, 0.12037), xytext=(0, 12), textcoords="offset points", ha="center", fontsize=11, color=INK)
-ax.annotate("0.11624", (7, 0.11624), xytext=(-14, -4), textcoords="offset points", ha="right", va="top", fontsize=11, color=INK, weight="bold")
+fig, ax = plt.subplots(figsize=(8.32, 2.7))
+ax.hlines(0.11745, 0.7, 7.15, ls=(0, (4, 3)), color=GREY, lw=1.5)
+ax.text(1, 0.1180, "first attempt 0.11745", va="bottom", fontsize=12, color=SOFT)
+ax.plot(x, k.cv_rmse, "o-", color=BLUE, lw=2.2, ms=8, label="our CV")
+ax.plot(x, k.kaggle_score, "s-", color=ACCENT, lw=2.2, ms=8, label="Kaggle")
+ax.annotate("0.12037", (6, 0.12037), xytext=(0, 12), textcoords="offset points", ha="center", fontsize=12, color=INK)
+ax.annotate("0.11624", (7, 0.11624), xytext=(16, 0), textcoords="offset points", ha="left", va="center", fontsize=12, color=INK, weight="bold")
 ax.set_xticks(x, [f"S{i}" for i in x])
-ax.set(ylabel="RMSE (log price)", ylim=(0.110, 0.16), xlim=(0.6, 7.4))
+ax.set_yticks([0.12, 0.14, 0.16])
+ax.set(ylabel="RMSE", ylim=(0.112, 0.16), xlim=(0.7, 7.6))
 ax.legend(frameon=False, loc="upper right", ncol=2)
 fig.tight_layout()
 save(fig, "leaderboard.png", LIGHT)
 
-# residual correlation heatmap: 920 x 800 px, recomputed from the notebook's OOF predictions
+# residual correlation heatmap, lower triangle: 960 x 820 px, recomputed from the notebook's OOF predictions
 os.chdir(ROOT / "v2")
 # the notebook parts save their own figures; skip that here so v2/results/figures stays untouched
 _savefig = matplotlib.figure.Figure.savefig
@@ -77,16 +78,19 @@ matplotlib.figure.Figure.savefig = _savefig
 names = ["ridge", "lasso", "elasticnet", "rf", "xgb", "catboost", "svr"]
 labels = ["Ridge", "Lasso", "ElasticNet", "R. Forest", "XGBoost", "CatBoost", "SVR"]
 res = pd.DataFrame({n: ns["y_log"] - ns["oof"][n] for n in names}).corr().to_numpy()
-fig, ax = plt.subplots(figsize=(4.6, 4.0))
+tri = np.where(np.tril(np.ones_like(res), -1)[1:, :-1] == 1, res[1:, :-1], np.nan)  # rows Lasso..SVR, cols Ridge..CatBoost
+fig, ax = plt.subplots(figsize=(4.8, 4.1))
 cmap = matplotlib.colors.LinearSegmentedColormap.from_list("deck", [ALT, BLUE, INK])
-ax.imshow(res, cmap=cmap, vmin=0.7, vmax=1)
-ax.set_xticks(range(7), labels, rotation=40, ha="right", fontsize=12)
-ax.set_yticks(range(7), labels, fontsize=12)
-for i in range(7):
-    for j in range(7):
-        ax.text(j, i, f"{res[i, j]:.2f}", ha="center", va="center", fontsize=11,
-                color="white" if res[i, j] > 0.8 else INK)
-ax.add_patch(matplotlib.patches.Rectangle((-0.5, -0.5), 3, 3, fill=False, edgecolor=ACCENT, lw=3.5))
+cmap.set_bad(ALT)
+ax.imshow(tri, cmap=cmap, vmin=0.6, vmax=1)
+ax.set_xticks(range(6), labels[:-1], rotation=35, ha="right", fontsize=12)
+ax.set_yticks(range(6), labels[1:], fontsize=12)
+for i in range(6):
+    for j in range(i + 1):
+        ax.text(j, i, f"{tri[i, j]:.2f}", ha="center", va="center", fontsize=12.5,
+                color="white" if tri[i, j] > 0.8 else INK)
+ax.add_patch(matplotlib.patches.Polygon([(-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (1.5, 0.5), (1.5, 1.5), (-0.5, 1.5)],
+                                        closed=True, fill=False, edgecolor=ACCENT, lw=4))
 ax.spines[:].set_visible(False)
 ax.tick_params(length=0)
 fig.tight_layout()
