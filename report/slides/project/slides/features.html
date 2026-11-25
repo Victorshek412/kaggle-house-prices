@@ -1,13 +1,23 @@
 <section id="features" class="alt">
+<div class="head">
 <p class="eyebrow">FEATURE ENGINEERING · QUESTION 1</p>
-<h2>One change per step; the log of area mattered most</h2>
-<div class="split">
-<img class="fig rise" src="/_blob/f84e7e730a91806deb9838d15f8b3c5a" alt="Bar chart of CV RMSE after each feature step, with a large drop at step 5">
+<h2>One change per step: the log of area mattered most</h2>
+</div>
+<div class="body" style="grid-template-columns:1fr 520px">
+<div class="dots rise" style="--i:1; --lab:400px; --rh:92px">
+<div class="row"><p class="name"><small>Step 1</small>Ridge on the raw price</p><div class="track"><i style="--x:86.6%"></i></div><p class="val">0.1553</p></div>
+<div class="row"><p class="name"><small>Step 2</small>Predict the log price</p><div class="track"><i style="--x:77.4%"></i></div><p class="val">0.1521</p></div>
+<div class="row"><p class="name"><small>Step 3</small>Label missing values</p><div class="track"><i style="--x:74.6%"></i></div><p class="val">0.1511</p></div>
+<div class="row"><p class="name"><small>Step 4</small>Add total area and age</p><div class="track"><i style="--x:74.9%"></i></div><p class="val">0.1512</p></div>
+<div class="row hot"><p class="name"><small>Step 5</small>Log of 20 skewed areas</p><div class="track"><i style="--x:21.1%"></i></div><p class="val">0.1324</p></div>
+<div class="axis"><span></span><div class="ticks"><span style="--x:14.3%">0.13</span><span style="--x:42.9%">0.14</span><span style="--x:71.4%">0.15</span></div></div>
+<div class="axis"><p class="note">CV RMSE, Ridge model (← lower is better)</p></div>
+</div>
 <div class="col">
 <p class="big rise" style="--i:2">−12%</p>
-<p class="lead">Step 5: log of the 20 skewed area features cut the CV error from 0.1512 to 0.1324.</p>
-<p class="lead">Price grows in proportion to size, so on a log scale the relationship becomes a straight line.</p>
+<p class="lead">Step 5 cut the CV error from 0.1512 to 0.1324.</p>
+<p class="lead">Price grows in proportion to size, so on a log scale the relationship becomes a <b>straight line</b> that Ridge can fit.</p>
 </div>
 </div>
-<aside>[Member 1] Then we improved the features one step at a time with the same Ridge model. Predicting the log price and labelling missing values helped a little. Adding total area and house age did nothing, because a linear model can already add columns together. The big jump was step 5: the log of the skewed area features cut the error by twelve percent. Price grows in proportion to size, so on a log scale the relationship is a straight line. This is our answer to the first question.</aside>
+<aside>[Member 2] Then we improved the features one step at a time with the same Ridge model. Predicting the log price and labelling missing values helped a little. Adding total area and house age did nothing, because a linear model can already add columns together. The big jump was step 5: the log of the twenty skewed area features cut the error by twelve percent. Price grows in proportion to size, so on a log scale the relationship becomes a straight line. That is our answer to the first question. Over to [Member 1].</aside>
 </section>

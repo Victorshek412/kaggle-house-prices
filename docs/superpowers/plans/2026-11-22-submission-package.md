@@ -117,7 +117,7 @@
 **Files：** Create `report/Video_script.docx`
 
 - [ ] **Step 1：** Claude 寫英文講稿，大約 900 至 950 字（每分鐘大約 125 字，即係 7.5 分鐘），每張 slide 一段，並標明邊個講。
-- [ ] **Step 2：** 分工建議：隊友講 slides 1 至 4（題目、任務、第一次嘗試、EDA，大約 2 分鐘）；你講其餘部份。
+- [ ] **Step 2：** 分工（一人一半）：隊友講 slides 1 至 7（題目、任務、第一次嘗試、EDA、validation、feature engineering，約 484 字）；你講 slides 8 至 14（models、blend、leaderboard、error analysis、Step 13、結果、lessons，約 457 字）。
 - [ ] **Step 3（檢查）：** 你同隊友各自讀一次，計時；兩段加埋唔可以超過 7:30，留返 30 秒緩衝。
 
 ### Task 7：錄片同壓縮（你 + 隊友）

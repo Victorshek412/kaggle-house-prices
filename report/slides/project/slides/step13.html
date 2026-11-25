@@ -1,13 +1,29 @@
 <section id="step13">
+<div class="head">
 <p class="eyebrow">STEP 13</p>
-<h2>Keep the outliers and flag them</h2>
-<div class="split">
-<div class="col">
-<p class="lead">We kept the two houses in training and added one feature, <b>HugePartial</b>: over 4,000 sq ft and a partial sale.</p>
+<h2>Keep the outliers in training, and flag them</h2>
+</div>
+<div class="body" style="grid-template-columns:1fr 880px">
+<div class="col" style="gap:36px">
+<p class="pill"><b>HugePartial</b> = over 4,000 sq ft <b>and</b> a partial sale</p>
 <p class="lead">Our own check: hold out one outlier, learn from the other, predict it.</p>
-<p class="lead">House 2550: $643k → $260k. Other houses barely moved.</p>
+<p class="lead">Test house 2550: <b>$643k → $260k</b>. Other houses barely moved.</p>
 </div>
-<img class="fig rise" src="/_blob/31cbd046355b4929b2374bd57a912f66" alt="Bar chart: true price, earlier prediction and Step 13 prediction for houses 524 and 1299">
+<div class="col rise" style="--i:1; gap:36px">
+<div class="legend"><span><i class="ink"></i>true price</span><span><i></i>earlier method</span><span><i class="hot"></i>Step 13</span></div>
+<div class="bars">
+<div class="group"><h3>House 524</h3>
+<div class="bar ink"><span style="--w:19.7%"></span><b>$185k</b></div>
+<div class="bar"><span style="--w:71.0%"></span><b>$666k</b></div>
+<div class="bar hot"><span style="--w:25.9%"></span><b>$243k</b></div>
 </div>
-<aside>[Member 1] So in step 13 we kept the two houses in training and added one simple feature that flags huge partial sales. Normal cross-validation could not test this, so we built our own check: hold out one outlier, learn from the other, and predict it. The error dropped from about four times too high to under two times. Our prediction for house 2550 fell from 643 to 260 thousand dollars, and the other houses barely changed.</aside>
+<div class="group"><h3>House 1299</h3>
+<div class="bar ink"><span style="--w:17.1%"></span><b>$160k</b></div>
+<div class="bar"><span style="--w:75.6%"></span><b>$709k</b></div>
+<div class="bar hot"><span style="--w:32.3%"></span><b>$303k</b></div>
+</div>
+</div>
+</div>
+</div>
+<aside>[Member 1] So in step 13 we kept the two houses in training and added one simple feature that flags huge partial sales. Normal cross-validation cannot test this, so we built our own check: hold out one outlier, learn from the other, and predict it. Our predictions went from about four times the true price to under two times. For house 2550, the prediction fell from 643 to 260 thousand dollars, and the other houses barely changed.</aside>
 </section>

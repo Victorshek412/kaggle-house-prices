@@ -1,21 +1,30 @@
 <section id="models">
+<div class="head">
 <p class="eyebrow">COMPARING MODELS</p>
 <h2>Boosting won, Random Forest came last</h2>
-<div class="split">
-<table class="models">
-<tr><th>Model</th><th style="text-align:right">CV RMSE</th></tr>
-<tr><td>XGBoost</td><td style="text-align:right">0.1231</td></tr>
-<tr><td>CatBoost</td><td style="text-align:right">0.1232</td></tr>
-<tr><td>SVR</td><td style="text-align:right">0.1235</td></tr>
-<tr><td>Lasso</td><td style="text-align:right">0.1255</td></tr>
-<tr><td>ElasticNet</td><td style="text-align:right">0.1257</td></tr>
-<tr><td>Ridge</td><td style="text-align:right">0.1277</td></tr>
-<tr><td>Random Forest</td><td style="text-align:right">0.1382</td></tr>
-</table>
-<div class="col">
-<img class="fig rise" style="height:500px" src="/_blob/8654a4df840fbc4cc200b0736aa12253" alt="Line chart: Random Forest error stops falling after a few trees, boosting keeps falling to a lower error">
-<p class="caption">Averaging trees stops helping; boosting keeps fixing what is left.</p>
+</div>
+<div class="body" style="grid-template-columns:1fr 600px">
+<div class="dots rise" style="--i:1; --lab:300px; --rh:72px">
+<div class="row hot"><p class="name">XGBoost</p><div class="track"><i style="--x:15.5%"></i></div><p class="val">0.1231</p></div>
+<div class="row hot"><p class="name">CatBoost</p><div class="track"><i style="--x:16%"></i></div><p class="val">0.1232</p></div>
+<div class="row"><p class="name">SVR</p><div class="track"><i style="--x:17.5%"></i></div><p class="val">0.1235</p></div>
+<div class="row"><p class="name">Lasso</p><div class="track"><i style="--x:27.5%"></i></div><p class="val">0.1255</p></div>
+<div class="row"><p class="name">ElasticNet</p><div class="track"><i style="--x:28.5%"></i></div><p class="val">0.1257</p></div>
+<div class="row"><p class="name">Ridge</p><div class="track"><i style="--x:38.5%"></i></div><p class="val">0.1277</p></div>
+<div class="row dim"><p class="name">Random Forest</p><div class="track"><i style="--x:91%"></i></div><p class="val">0.1382</p></div>
+<div class="axis"><span></span><div class="ticks"><span style="--x:0%">0.120</span><span style="--x:50%">0.130</span><span style="--x:100%">0.140</span></div></div>
+<div class="axis"><p class="note">CV RMSE (← lower is better)</p></div>
+</div>
+<div class="col" style="gap:48px">
+<div class="col tight rise" style="--i:2">
+<h3 style="color:var(--soft)">Random Forest</h3>
+<p class="lead">Averages deep trees built independently. After a few hundred trees, more trees stop helping.</p>
+</div>
+<div class="col tight rise" style="--i:3">
+<h3 style="color:var(--accent)">Boosting</h3>
+<p class="lead">Adds small trees one after another. Each new tree fixes the error that is still left.</p>
 </div>
 </div>
-<aside>[Member 1] With the features fixed, we compared seven models. The boosting models, XGBoost and CatBoost, were the best at about 0.123, and Random Forest was the worst, even behind Ridge. The chart shows why. Random Forest averages independent trees, so adding more trees soon stops helping. Boosting adds small trees one after another, and each one fixes the error that is still left, so it reaches a lower error.</aside>
+</div>
+<aside>[Member 1] Thanks. With the features fixed, we compared seven models on the same folds. XGBoost and CatBoost, the two boosting models, were the best at about 0.123, and Random Forest was the worst, even behind Ridge. Random Forest averages trees that are built independently, so after a few hundred trees, more trees stop helping. Boosting adds small trees one after another, and each new tree fixes the error that is still left.</aside>
 </section>

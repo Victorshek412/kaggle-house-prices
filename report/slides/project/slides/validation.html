@@ -1,13 +1,27 @@
 <section id="validation">
+<div class="head">
 <p class="eyebrow">HOW WE MEASURE</p>
-<h2>Same five folds for every step, no leakage</h2>
-<div class="split">
-<ul class="points">
-<li>Each fold of 292 houses is predicted by a model trained on the other 1,168.</li>
-<li>Median filling, scaling and one-hot encoding are refitted inside every fold.</li>
-<li>Baselines: average price 0.408, simple Ridge 0.155.</li>
-</ul>
-<img class="fig rise" src="/_blob/2ad3e5cdfcc922e1503291f8504738f8" alt="Grid showing which of five folds validates each of the first 20 houses">
+<h2>The same five folds for every step, with no leakage</h2>
 </div>
-<aside>[Member 1] Thanks. To compare ideas fairly, we use five-fold cross-validation. Each fold of 292 houses is predicted by a model trained on the other 1,168, so every house is predicted once by a model that never saw it. To avoid data leakage, the median filling, scaling and one-hot encoding are refitted inside every fold. Predicting the average price gives an error of 0.408, and a simple Ridge regression gives 0.155.</aside>
+<div class="body" style="grid-template-columns:860px 1fr">
+<div class="col rise" style="--i:1; gap:28px">
+<div class="folds">
+<div class="frow"><span>Fold 1</span><i class="v"></i><i></i><i></i><i></i><i></i></div>
+<div class="frow"><span>Fold 2</span><i></i><i class="v"></i><i></i><i></i><i></i></div>
+<div class="frow"><span>Fold 3</span><i></i><i></i><i class="v"></i><i></i><i></i></div>
+<div class="frow"><span>Fold 4</span><i></i><i></i><i></i><i class="v"></i><i></i></div>
+<div class="frow"><span>Fold 5</span><i></i><i></i><i></i><i></i><i class="v"></i></div>
+</div>
+<div class="legend" style="padding-left:138px"><span><i class="hot"></i>predict 292 houses</span><span><i style="background:var(--blue-light)"></i>train on the other 1,168</span></div>
+</div>
+<div class="col" style="gap:40px">
+<p class="lead">Every house is predicted once, by a model that never saw it.</p>
+<p class="lead">Median filling, scaling and one-hot encoding are refitted <b>inside every fold</b>.</p>
+<div class="pair rise" style="--i:2">
+<div><p class="v">0.408</p><p class="caption">baseline: predict the average price</p></div>
+<div><p class="v hot">0.155</p><p class="caption">first model: simple Ridge regression</p></div>
+</div>
+</div>
+</div>
+<aside>[Member 2] To compare ideas fairly, we use five-fold cross-validation with the same folds for every step. Each fold of 292 houses is predicted by a model trained on the other 1,168, so every house is predicted once by a model that never saw it. To avoid data leakage, the median filling, scaling and one-hot encoding are refitted inside every fold. Predicting the average price gives an error of 0.408, and a simple Ridge regression gives 0.155.</aside>
 </section>

@@ -1,13 +1,20 @@
 <section id="blend" class="alt">
+<div class="head">
 <p class="eyebrow">BLENDING</p>
 <h2>Blend models that make different mistakes</h2>
-<div class="split">
-<img class="fig rise" src="/_blob/1b761a0d4cb73b3aa003d0a4c1aca418" alt="Heatmap of correlations between the models' errors; the three linear models are almost identical">
-<div class="col">
-<p class="lead">Ridge, Lasso and ElasticNet make almost the same errors (0.99), so we keep only Lasso.</p>
-<p class="lead">Lasso + XGBoost + CatBoost + SVR, equal weights:</p>
+</div>
+<div class="body" style="grid-template-columns:840px 1fr">
+<div class="col tight rise" style="--i:1">
+<p class="caption">How alike the models’ errors are (correlation)</p>
+<img class="fig" style="width:840px" src="/_blob/d755ca9d7a8ef1349ff2ae21addfc2cf" alt="Heatmap of correlations between the models' errors; Ridge, Lasso and ElasticNet (outlined) correlate at 0.99, the others 0.76 to 0.93">
+</div>
+<div class="col" style="gap:40px">
+<p class="lead">Ridge, Lasso and ElasticNet make almost the same errors (0.99), so we keep only <b>Lasso</b>.</p>
+<p class="lead">Lasso + XGBoost + CatBoost + SVR, <b>equal weights</b>:</p>
+<div class="col tight">
 <p class="big rise" style="--i:2">0.1191</p>
-<p class="caption">CV RMSE, better than the best single model (0.1231)</p>
+<p class="caption">CV RMSE of the blend · best single model 0.1231</p>
+</div>
 </div>
 </div>
 <aside>[Member 1] Blending only helps when the models make different mistakes. This heatmap shows how similar their errors are. Ridge, Lasso and ElasticNet make almost the same errors, so we kept only Lasso. We blended Lasso, XGBoost, CatBoost and SVR with equal weights, and the CV error dropped to 0.119, better than any single model. We did not tune the weights, because that would only fit the noise.</aside>

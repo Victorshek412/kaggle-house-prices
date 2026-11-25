@@ -1,0 +1,15 @@
+<section id="price">
+<div class="head">
+<p class="eyebrow">EXPLORING THE DATA</p>
+<h2>Prices are skewed, so we predict the log</h2>
+</div>
+<div class="body" style="grid-template-rows:auto auto auto; align-content:center; gap:20px">
+<div class="pair" style="gap:144px">
+<p class="lead"><b>Sale price</b> · skewness 1.88</p>
+<p class="lead"><b style="color:var(--accent)">Log of sale price</b> · skewness 0.12</p>
+</div>
+<img class="fig rise" style="--i:1; width:1664px" src="/_blob/eb79e6bf1ec43405148a1d3f33605233" alt="Two histograms: sale price has a long right tail; the log of sale price is close to a bell curve">
+<p class="caption">Most houses sell for $100k–$250k, with a long tail of expensive ones. After the log, the shape is close to a bell curve.</p>
+</div>
+<aside>[Member 2] First, the data. Most houses cost between 100 and 250 thousand dollars, and a few expensive ones make a long tail, so the price has a skewness of 1.88. After a log transform it is 0.12, close to a bell curve. Kaggle also scores on the log price, so we predict the log price and convert back at the end.</aside>
+</section>

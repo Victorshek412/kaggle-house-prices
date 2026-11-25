@@ -13,6 +13,7 @@ const cell = (text, i, header) => new TableCell({
   margins: { top: 60, bottom: 60, left: 100, right: 100 },
   children: [new Paragraph({ children: [new TextRun({ text, font: FONT, size: 24, bold: header })] })],
 });
+const span = (who) => { const n = rows.filter((r) => r[2] === who).map((r) => r[0]); return `${Math.min(...n)} to ${Math.max(...n)}`; };
 const words = (who) => rows.filter((r) => r[2] === who).reduce((a, r) => a + r[3], 0);
 const doc = new Document({
   styles: { default: { document: { run: { font: FONT, size: 24 } } } },
@@ -20,7 +21,7 @@ const doc = new Document({
     properties: { page: { margin: { top: 1080, right: 1080, bottom: 1080, left: 1080 } } },
     children: [
       new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: "House Price Prediction: video script", font: FONT, size: 32, bold: true })] }),
-      new Paragraph({ spacing: { after: 240 }, children: [new TextRun({ text: `About ${Math.round((words("Member 1") + words("Member 2")) / 125 * 10) / 10} minutes at 125 words per minute. Member 2: slides 1 to 4 (${words("Member 2")} words). Member 1: slides 5 to 13 (${words("Member 1")} words). Replace [Member 1], [Member 2] and [team name] before recording.`, font: FONT, size: 24, italics: true })] }),
+      new Paragraph({ spacing: { after: 240 }, children: [new TextRun({ text: `About ${Math.round((words("Member 1") + words("Member 2")) / 125 * 10) / 10} minutes at 125 words per minute. Member 2: slides ${span("Member 2")} (${words("Member 2")} words). Member 1: slides ${span("Member 1")} (${words("Member 1")} words). The Member 1 / Member 2 labels can be swapped. Replace [Member 1], [Member 2] and [team name] before recording.`, font: FONT, size: 24, italics: true })] }),
       new Table({
         width: { size: widths.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths: widths,
         rows: [new TableRow({ tableHeader: true, children: ["Slide", "Speaker", "Script"].map((t, i) => cell(t, i, true)) }),
