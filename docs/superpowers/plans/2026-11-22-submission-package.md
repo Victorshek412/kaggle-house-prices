@@ -4,7 +4,7 @@
 
 **Goal：** 喺 2026-11-29（星期日）23:59 之前，交齊 brief 要求嘅所有嘢：報告文件、8 分鐘片、個人答案、AI 使用說明，打包成用隊名命名嘅 zip。
 
-**Architecture：** 報告初稿已經有（`report/House_Prices_Report_draft.docx`）。Claude 負責起草文字類嘅嘢（AI 說明、個人答案提示、slides、講稿）同做檢查；學生負責讀筆記、改報告、錄片同交；隊友負責 Kaggle 隊名、自己嘅個人答案，同埋片入面自己嗰段。每個 task 都有「點樣知做完」嘅檢查。
+**Architecture：** 報告初稿已經有（`report/House_Prices_Report.docx`，單欄、有目錄，由 `report/build_report.js` 生成）。Claude 負責起草文字類嘅嘢（AI 說明、個人答案提示、slides、講稿）同做檢查；學生負責讀筆記、改報告、錄片同交；隊友負責 Kaggle 隊名、自己嘅個人答案，同埋片入面自己嗰段。每個 task 都有「點樣知做完」嘅檢查。
 
 **Tech Stack：** Word（.docx → PDF）、Slides artifact（可以下載做 .pptx）、PowerPoint「錄製投影片」或者 Zoom 錄影、HandBrake（壓縮片）、Kaggle 網頁。
 
@@ -59,7 +59,7 @@
 
 ### Task 2：讀筆記、改報告、出 PDF（你，Claude 檢查）
 
-**Files：** Modify `report/House_Prices_Report_draft.docx` → 另存 `report/<隊名>_Report.docx` 同 `.pdf`
+**Files：** Modify `report/House_Prices_Report.docx` → 另存 `report/<隊名>_Report.docx` 同 `.pdf`
 
 **Interfaces：** Consumes Task 1 嘅 screenshot、Task 4 嘅個人答案（附錄 B）。
 
