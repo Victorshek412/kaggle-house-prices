@@ -6,3 +6,7 @@ __pycache__/
 catboost_info/
 *.log
 house-prices-advanced-regression-techniques/
+
+# names and student IDs (repo is public)
+report/team.json
+report/private/

@@ -1,7 +1,7 @@
 // Builds report/House_Prices_Report.docx: single column with a table of contents,
 // Times New Roman 12. Run from the repo root after `python report/make_figures.py`:
 //     node report/build_report.js
-// Word fills in the table of contents when it opens the file (it asks to update fields; say yes).
+// Then `python3 report/fill_toc.py <docx>` writes the table of contents (with page numbers) into the file.
 const fs = require("fs");
 const path = require("path");
 const {
@@ -144,6 +144,14 @@ function code(lines) {
 }
 
 const F = (name) => path.join(FIGS, name);
+
+// Names and student IDs stay out of the public repository: `--private` reads them from
+// report/team.json (gitignored) and writes report/private/<team>_Report.docx.
+const PRIVATE = process.argv.includes("--private");
+const TEAM = PRIVATE ? JSON.parse(fs.readFileSync(path.join(__dirname, "team.json"), "utf8")) : null;
+const teamLine = TEAM ? `${TEAM.team}: ${TEAM.members.map((m) => `${m.name} (${m.id})`).join(", ")}`
+  : "[Team name]: [Name] ([Student ID]), [Name] ([Student ID])";
+const memberNames = TEAM ? TEAM.members.map((m) => m.name) : ["[Name 1]", "[Name 2]"];
 const pageBreak = () => new Paragraph({ children: [new PageBreak()] });
 
 // ---------- page 1: title and summary; page 2: contents ----------
@@ -151,7 +159,7 @@ const FRONT = [
   rule(),
   new Paragraph({ spacing: { before: 120, after: 120 }, children: [run("House Price Prediction", { bold: true, size: 44 })] }),
   new Paragraph({ spacing: { after: 60 }, children: [run("Kaggle competition: House Prices, Advanced Regression Techniques", { size: 26 })] }),
-  new Paragraph({ spacing: { after: 60 }, children: [run("[Team name]: [Name] ([Student ID]), [Name] ([Student ID])", { bold: true })] }),
+  new Paragraph({ spacing: { after: 60 }, children: [run(teamLine, { bold: true })] }),
   new Paragraph({ spacing: { after: 120 }, children: [run("[Course code and name]")] }),
   rule(),
   h1("Summary"),
@@ -485,7 +493,7 @@ const APPX = [
   ...code([...sourceLines("part6_error_analysis.py", "def clean_years"), "",
            ...sourceLines("part6_error_analysis.py", "def add_huge_partial_flag")]),
   h1("Appendix D. Individual answers"),
-  ...["[Name 1]", "[Name 2]"].flatMap((who) => [
+  ...memberNames.flatMap((who) => [
     h3(who),
     body([{ b: "Main role: " }, "[...]"]),
     body([{ b: "Main difficulties (team / own): " }, "[...]"]),
@@ -500,7 +508,7 @@ const pageFooter = new Footer({ children: [new Paragraph({ alignment: AlignmentT
   children: [new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: 20 })] })] });
 
 const doc = new Document({
-  creator: "[team name]",
+  creator: TEAM ? TEAM.team : "[team name]",
   title: "House Price Prediction",
   features: { updateFields: true },
   styles: {
@@ -531,7 +539,8 @@ const doc = new Document({
 });
 
 Packer.toBuffer(doc).then((buffer) => {
-  const out = path.join(__dirname, "House_Prices_Report.docx");
+  const out = TEAM ? path.join(__dirname, "private", `${TEAM.team}_Report.docx`) : path.join(__dirname, "House_Prices_Report.docx");
+  fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, buffer);
   console.log("wrote", out);
 });
